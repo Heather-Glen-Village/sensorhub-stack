@@ -11,6 +11,16 @@ services:
       - "9090:9090"  # expose metrics
     restart: unless-stopped
 
+  mqtt-broker2:
+    build:
+      context: ./mqtt-broker
+      dockerfile: Dockerfile.mqttbroker
+    container_name: mqtt-broker2
+    ports:
+      - "1884:1883"
+      - "9095:9090"  # expose metrics
+    restart: unless-stopped  
+
   prometheus:
     image: prom/prometheus
     container_name: prometheus
