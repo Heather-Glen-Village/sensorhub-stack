@@ -1,0 +1,11 @@
+groups:
+  - name: always-fire
+    rules:
+      - alert: TestEmailAlert
+        expr: vector(1)  # always true
+        for: 15s
+        labels:
+          severity: critical
+        annotations:
+          summary: "🚨 Test Alert Fired"
+          description: "This is a test alert to verify email routing."
