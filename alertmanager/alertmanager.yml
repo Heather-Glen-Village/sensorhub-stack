@@ -11,5 +11,5 @@ route:
 receivers:
   - name: email-alerts
     email_configs:
-      - to: 'youremail@gmail.com'
+      - to: 'minhazur.rakin101@gmail.com'
         send_resolved: true
