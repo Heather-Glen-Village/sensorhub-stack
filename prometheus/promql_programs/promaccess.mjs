@@ -1,35 +1,32 @@
 import axios from 'axios';
 
-const baseURL = 'http://localhost:9091/api/v1'; // Prometheus exposed on 9091 in your docker-compose
+const baseURL = 'http://localhost:9091/api/v1';
 
-async function queryRange() {
-  const query = 'sensor_temperature_measurement';
-  const end = Math.floor(Date.now() / 1000); // current time (in seconds)
-  const start = end - 60 * 60; // 1 hour ago
+async function queryTotalMessagesLastTwoHours() {
+  const query = 'mqtt_messages_received_total';
+
 
   try {
-    const res = await axios.get(`${baseURL}/query_range`, {
-      params: {
-        query,
-        start,
-        end,
-        step: '15s', // match your scrape interval
-      },
+    const res = await axios.get(`${baseURL}/query`, {
+      params: { query },
     });
 
     const result = res.data.data.result;
 
-    console.log('📈 Time Series Result:');
+    if (result.length === 0) {
+      console.log('⚠️ No messages received in the past 2 hours.');
+      return;
+    }
+
+    console.log('📥 Total MQTT messages received in the last 2 hours:');
     for (const series of result) {
-      console.log(`Metric:`, series.metric);
-      console.log(`Values:`);
-      for (const [timestamp, value] of series.values) {
-        console.log(`  ${new Date(timestamp * 1000).toISOString()} = ${value}`);
-      }
+      const { topic, client_id } = series.metric;
+      const count = series.value[1];
+      console.log(`• Topic: ${topic}, Client: ${client_id} => ${count} messages`);
     }
   } catch (err) {
     console.error('❌ Error:', err.message);
   }
 }
 
-queryRange();
+queryTotalMessagesLastTwoHours();

@@ -13,87 +13,73 @@ mqttServer.listen(MQTT_PORT, () => {
 
 // Prometheus metrics setup
 const collectDefaultMetrics = client.collectDefaultMetrics;
-collectDefaultMetrics(); // collects default Node.js metrics
+collectDefaultMetrics(); // collects Node.js-level metrics
 
-// Counter: total MQTT messages received
 const messagesReceived = new client.Counter({
   name: 'mqtt_messages_received_total',
   help: 'Total number of MQTT messages received',
   labelNames: ['topic', 'client_id'],
 });
 
-// Store dynamic gauges per sensor type
+const malformedMessages = new client.Counter({
+  name: 'mqtt_malformed_messages_total',
+  help: 'Number of malformed or invalid MQTT messages',
+});
+
 const sensorGauges = {};
 
-// Helper to get or create a gauge for a given sensor type
-// Helper function to get or create a Prometheus Gauge for a given sensor type
+// Get or create a Gauge for a specific sensor type
 function getGauge(sensorType) {
-  // Check if we already created a gauge for this sensorType
-  // If yes, reuse it — Prometheus metrics must not be redefined
+  const sanitizedName = sensorType.replace(/[^a-zA-Z0-9_]/g, '_');
+
   if (!sensorGauges[sensorType]) {
-
-    // Sanitize the sensor type name to make it safe for use in a Prometheus metric name
-    // Prometheus metric names must contain only letters, numbers, and underscores
-    // Example: "temperature-humidity" becomes "temperature_humidity"
-    const sanitizedName = sensorType.replace(/[^a-zA-Z0-9_]/g, '_');
-
-    // Create a new Gauge metric in prom-client
     sensorGauges[sensorType] = new client.Gauge({
-      // Metric name will be something like:
-      // "sensor_temperature_measurement" or "sensor_light_measurement"
       name: `sensor_${sanitizedName}_measurement`,
-
-      // Human-readable description of what this metric tracks
       help: `Current measurement for ${sensorType} sensors`,
-
-      // Labels let you attach metadata to the metric values
-      // These allow Prometheus to store multiple values under the same metric name
-      // For example: room101 sensor01 vs room102 sensor02
       labelNames: ['client_room', 'sensor_id', 'sensor_type'],
     });
   }
 
-  // Return the existing or newly created Gauge
   return sensorGauges[sensorType];
 }
 
-
-// Handle MQTT messages
+// MQTT message handling
 aedes.on('publish', async (packet, clientInfo) => {
   if (clientInfo) {
     const payload = packet.payload.toString();
     console.log(`📩 Received from ${clientInfo.id} on topic "${packet.topic}": ${payload}`);
-
     messagesReceived.inc({ topic: packet.topic, client_id: clientInfo.id });
 
     try {
-      const data = JSON.parse(payload);
-      const { clientRoom, sensorId, sensorType, measurement } = data;
+      const parsed = JSON.parse(payload);
+      const dataArray = Array.isArray(parsed) ? parsed : [parsed];
 
-      if (
-        typeof clientRoom === 'string' &&
-        typeof sensorId === 'string' &&
-        typeof sensorType === 'string' &&
-        typeof measurement === 'number'
-      ) {
-        // Optional: enforce short numeric sensorId like "01"
-        if (!/^\d{2}$/.test(sensorId)) {
-          console.warn(`❌ Invalid sensorId format: "${sensorId}"`);
-          return;
+      for (const data of dataArray) {
+        const { clientRoom, sensorId, sensorType, measurement } = data;
+
+        if (
+          typeof clientRoom === 'string' &&
+          typeof sensorId === 'string' &&
+          typeof sensorType === 'string' &&
+          typeof measurement === 'number'
+        ) {
+          const gauge = getGauge(sensorType);
+          gauge.set(
+            {
+              client_room: clientRoom,
+              sensor_id: sensorId,
+              sensor_type: sensorType,
+            },
+            measurement
+          );
+        } else {
+          console.warn(`⚠️ Invalid sensor data structure: ${JSON.stringify(data)}`);
+          malformedMessages.inc();
         }
-
-        const gauge = getGauge(sensorType);
-        gauge.set(
-          {
-            client_room: clientRoom,
-            sensor_id: sensorId,
-            sensor_type: sensorType,
-          },
-          measurement
-        );
       }
     } catch (err) {
       console.warn('⚠️ Invalid payload format:', err.message);
+      malformedMessages.inc();
     }
   }
 });

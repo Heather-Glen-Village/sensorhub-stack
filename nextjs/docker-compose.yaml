@@ -1,20 +1,21 @@
-version: '3.8'
-
 services:
-  # nextjs:
-  #   build: .
-  #   container_name: next-auth-app
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - DATABASE_URL=postgres://postgres:postgres@db:5432/authdb
-  #     - JWT_SECRET=super_secure_key
-  #   depends_on:
-  #     - db
-  #   volumes:
-  #     - .:/app
-  #   working_dir: /app
-  #   command: npm run dev
+  nextjs:
+    build:
+      context: ./login-auth-app
+      dockerfile: Dockerfile.nextjs
+    container_name: next-auth-app
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@serverside_db:5432/authdb
+      - JWT_SECRET=super_secure_key
+    depends_on:
+      - serverside_db
+    volumes:
+      - ./login-auth-app:/app:cached
+      - /app/node_modules  # prevent overwriting container-built node_modules
+    working_dir: /app
+    command: npm run dev
 
   serverside_db:
     image: postgres:15
