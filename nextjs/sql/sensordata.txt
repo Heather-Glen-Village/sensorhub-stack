@@ -1,0 +1,18 @@
+-- Drop old table if necessary
+DROP TABLE IF EXISTS sensordata;
+
+-- Recreate with normalized structure
+CREATE TABLE sensordata (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),
+  sensor_type TEXT NOT NULL,
+  measurement TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- Insert the rows
+INSERT INTO sensordata (user_id, sensor1, sensor2, sensor3, sensor4) VALUES
+  (2, 'temp:23.1', 'humidity:50.1%', 'motion:yes', 'light:222.9lx'),
+  (3, 'temp:27.1', 'humidity:51.2%', 'motion:no', 'light:160.9lx'),
+  (1, 'temp:24.5', 'humidity:45.1%', 'motion:yes', 'light:268.8lx');

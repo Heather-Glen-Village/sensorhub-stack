@@ -1,19 +1,28 @@
 const aedes = require('aedes')();
 const net = require('net');
 const express = require('express');
+const { Pool } = require('pg');
 const client = require('prom-client');
 
-// MQTT broker setup
+// --- PostgreSQL Setup ---
+const db = new Pool({
+  user: 'postgres',
+  host: 'host.docker.internal', // If inside Docker; use 'localhost' if outside
+  database: 'authdb',
+  password: 'postgres',
+  port: 5432,
+});
+
+// --- MQTT Broker Setup ---
 const MQTT_PORT = 1883;
 const mqttServer = net.createServer(aedes.handle);
-
 mqttServer.listen(MQTT_PORT, () => {
   console.log(`🚀 MQTT broker is running on port ${MQTT_PORT}`);
 });
 
-// Prometheus metrics setup
+// --- Prometheus Metrics Setup ---
 const collectDefaultMetrics = client.collectDefaultMetrics;
-collectDefaultMetrics(); // collects Node.js-level metrics
+collectDefaultMetrics();
 
 const messagesReceived = new client.Counter({
   name: 'mqtt_messages_received_total',
@@ -26,65 +35,70 @@ const malformedMessages = new client.Counter({
   help: 'Number of malformed or invalid MQTT messages',
 });
 
-const sensorGauges = {};
+const sensorGauges = {}; // Prometheus gauges by sensorType
 
-// Get or create a Gauge for a specific sensor type
 function getGauge(sensorType) {
-  const sanitizedName = sensorType.replace(/[^a-zA-Z0-9_]/g, '_');
-
+  const sanitized = sensorType.replace(/[^a-zA-Z0-9_]/g, '_');
   if (!sensorGauges[sensorType]) {
     sensorGauges[sensorType] = new client.Gauge({
-      name: `sensor_${sanitizedName}_measurement`,
-      help: `Current measurement for ${sensorType} sensors`,
-      labelNames: ['client_room', 'sensor_id', 'sensor_type'],
+      name: `sensor_${sanitized}_measurement`,
+      help: `Current measurement for ${sensorType}`,
+      labelNames: ['user_id', 'sensor_type'],
     });
   }
-
   return sensorGauges[sensorType];
 }
 
-// MQTT message handling
+// --- MQTT Publish Handler ---
 aedes.on('publish', async (packet, clientInfo) => {
-  if (clientInfo) {
-    const payload = packet.payload.toString();
-    console.log(`📩 Received from ${clientInfo.id} on topic "${packet.topic}": ${payload}`);
-    messagesReceived.inc({ topic: packet.topic, client_id: clientInfo.id });
+  if (!clientInfo) return;
 
-    try {
-      const parsed = JSON.parse(payload);
-      const dataArray = Array.isArray(parsed) ? parsed : [parsed];
+  const payload = packet.payload.toString();
+  console.log(`📩 Received from ${clientInfo.id} on topic "${packet.topic}": ${payload}`);
+  messagesReceived.inc({ topic: packet.topic, client_id: clientInfo.id });
 
-      for (const data of dataArray) {
-        const { clientRoom, sensorId, sensorType, measurement } = data;
+  try {
+    const data = JSON.parse(payload);
 
-        if (
-          typeof clientRoom === 'string' &&
-          typeof sensorId === 'string' &&
-          typeof sensorType === 'string' &&
-          typeof measurement === 'number'
-        ) {
-          const gauge = getGauge(sensorType);
-          gauge.set(
-            {
-              client_room: clientRoom,
-              sensor_id: sensorId,
-              sensor_type: sensorType,
-            },
-            measurement
-          );
-        } else {
-          console.warn(`⚠️ Invalid sensor data structure: ${JSON.stringify(data)}`);
-          malformedMessages.inc();
-        }
-      }
-    } catch (err) {
-      console.warn('⚠️ Invalid payload format:', err.message);
-      malformedMessages.inc();
+    if (!('user_id' in data) || !('readings' in data)) {
+      throw new Error('Missing user_id or readings[]');
     }
+
+    const { user_id, readings } = data;
+
+    if (typeof user_id !== 'number') throw new Error('user_id must be a number');
+    if (!Array.isArray(readings)) throw new Error('readings must be an array');
+
+    for (const reading of readings) {
+      if (
+        typeof reading.sensorType !== 'string' ||
+        typeof reading.measurement !== 'string'
+      ) {
+        throw new Error(`Invalid reading: ${JSON.stringify(reading)}`);
+      }
+
+      // Save to PostgreSQL
+      await db.query(
+        'INSERT INTO sensordata (user_id, sensor_type, measurement) VALUES ($1, $2, $3)',
+        [user_id, reading.sensorType, reading.measurement]
+      );
+
+      // Update Prometheus only if measurement is numeric
+      const numericValue = parseFloat(reading.measurement);
+      if (!isNaN(numericValue)) {
+        const gauge = getGauge(reading.sensorType);
+        gauge.set({ user_id: String(user_id), sensor_type: reading.sensorType }, numericValue);
+      }
+    }
+
+    console.log(`✅ Inserted ${readings.length} readings for user ${user_id}`);
+  } catch (err) {
+    console.warn('⚠️ Invalid payload or DB error:', err.message);
+    malformedMessages.inc();
   }
 });
 
-// HTTP server to expose Prometheus metrics
+// --- HTTP Server for Prometheus ---
 const METRICS_PORT = 9090;
 const app = express();
 

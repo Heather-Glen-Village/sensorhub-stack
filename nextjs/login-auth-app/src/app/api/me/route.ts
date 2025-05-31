@@ -23,11 +23,22 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: 'Invalid token' }, { status: 401 });
     }
 
-    // Optional: Fetch user-specific data from DB
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-    const user = result.rows[0];
+    // Fetch user data
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const user = userResult.rows[0];
 
-    return NextResponse.json({ user });
+    if (!user) {
+      return NextResponse.json({ message: 'User not found' }, { status: 404 });
+    }
+
+    // Fetch corresponding sensor data
+    const sensorResult = await pool.query(
+      'SELECT * FROM sensordata WHERE user_id = $1',
+      [userId]
+    );
+    const sensorData = sensorResult.rows;
+
+    return NextResponse.json({ user, sensorData });
   } catch (err) {
     console.error('Token verification failed:', err);
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });

@@ -37,7 +37,7 @@ services:
     volumes:
       - /Volumes/MinhazStorage/docker-file-shared/grafana_data:/var/lib/grafana  # Dashboards & settings
     ports:
-      - "3000:3000"
+      - "3001:3000"
     depends_on:
       - prometheus
     restart: unless-stopped

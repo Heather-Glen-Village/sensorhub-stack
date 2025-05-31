@@ -1,8 +1,21 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-export default function DashboardPage() {
-  const [user, setUser] = useState<any>(null);
+interface User {
+  id: number;
+  username: string;
+}
+
+interface SensorReading {
+  user_id: number;
+  sensor_type: string;
+  measurement: string;
+  created_at: string;
+}
+
+export default function SensorDashboard() {
+  const [user, setUser] = useState<User | null>(null);
+  const [readings, setReadings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,15 +36,53 @@ export default function DashboardPage() {
     fetchUser();
   }, []);
 
-  if (loading) return <div>Loading...</div>;
+  useEffect(() => {
+    if (!user) return;
 
+    const socket = new WebSocket('ws://localhost:8080');
+
+    socket.onmessage = (event) => {
+      try {
+        const rows: SensorReading[] = JSON.parse(event.data);
+        const userReadings = rows.filter(r => r.user_id === user.id);
+
+        const grouped: Record<string, string> = {};
+        for (const r of userReadings) {
+          grouped[r.sensor_type] = r.measurement;
+        }
+
+        setReadings(grouped);
+      } catch (err) {
+        console.error('Error parsing WebSocket data:', err);
+      }
+    };
+
+    return () => socket.close();
+  }, [user]);
+
+  if (loading) return <div>Loading...</div>;
   if (!user) return <div>You are not authorized. Please log in.</div>;
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h1>Welcome, {user.username}!</h1>
-      <p>User ID: {user.id}</p>
-      {/* Add more personalized info below if needed */}
+    <div className="min-h-screen bg-gray-100 p-6">
+      <div className="max-w-xl mx-auto">
+        <h1 className="text-2xl font-bold mb-4">Welcome, {user.username}!</h1>
+
+        {Object.keys(readings).length > 0 ? (
+          <div className="bg-white shadow rounded-lg p-4 border border-gray-200">
+            <h2 className="text-xl font-semibold text-blue-700 mb-2">Your Sensor Data</h2>
+            <ul className="space-y-1 text-gray-800">
+              {Object.entries(readings).map(([type, value]) => (
+                <li key={type}>
+                  <strong>{type.charAt(0).toUpperCase() + type.slice(1)}:</strong> {value}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <p>No sensor data found for your account.</p>
+        )}
+      </div>
     </div>
   );
 }
