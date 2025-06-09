@@ -1,0 +1,48 @@
+-- Drop tables if they already exist
+DROP TABLE IF EXISTS sensordata;
+DROP TABLE IF EXISTS users;
+
+-- Create users table
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL
+);
+
+-- Create sensordata table
+CREATE TABLE sensordata (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),
+  sensor_type TEXT NOT NULL,
+  measurement TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert users
+INSERT INTO users (id, username, password) VALUES
+  (1, 'testuser1', 'testpass1'),
+  (2, 'testuser2', 'testpass2'),
+  (3, 'testuser3', 'testpass3'),
+  (4, 'testuser4', 'testpass4');
+
+-- Insert sensor data
+INSERT INTO sensordata (user_id, sensor_type, measurement, created_at) VALUES
+  (1, 'temperature', '23.5', '2025-05-31 02:25:03.275663'),
+  (1, 'humidity', '52%', '2025-05-31 02:25:03.275663'),
+  (1, 'co2', '420ppm', '2025-05-31 02:25:03.275663'),
+  (1, 'motion', 'No motion', '2025-05-31 02:25:03.275663'),
+
+  (2, 'temperature', '21.8', '2025-05-31 02:25:03.275663'),
+  (2, 'humidity', '48%', '2025-05-31 02:25:03.275663'),
+  (2, 'co2', '410ppm', '2025-05-31 02:25:03.275663'),
+  (2, 'motion', 'Motion detected', '2025-05-31 02:25:03.275663'),
+
+  (3, 'temperature', '24.1', '2025-05-31 02:25:03.275663'),
+  (3, 'humidity', '46%', '2025-05-31 02:25:03.275663'),
+  (3, 'co2', '430ppm', '2025-05-31 02:25:03.275663'),
+  (3, 'motion', 'No motion', '2025-05-31 02:25:03.275663'),
+
+  (4, 'temperature', '22.9', '2025-05-31 02:25:03.275663'),
+  (4, 'humidity', '55%', '2025-05-31 02:25:03.275663'),
+  (4, 'co2', '415ppm', '2025-05-31 02:25:03.275663'),
+  (4, 'motion', 'Motion detected', '2025-05-31 02:25:03.275663');

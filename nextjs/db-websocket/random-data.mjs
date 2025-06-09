@@ -12,26 +12,30 @@ const getRandomValue = (min, max, suffix = '') =>
   `${(Math.random() * (max - min) + min).toFixed(1)}${suffix}`;
 
 async function updateSensorData(userId) {
-  const sensor1 = `temp:${getRandomValue(20, 30)}`;
-  const sensor2 = `humidity:${getRandomValue(40, 60)}%`;
-  const sensor3 = `motion:${Math.random() > 0.5 ? 'yes' : 'no'}`;
-  const sensor4 = `light:${getRandomValue(100, 300)}lx`;
+  const readings = [
+    { sensor_type: 'temperature', measurement: getRandomValue(20, 30) },
+    { sensor_type: 'humidity', measurement: getRandomValue(40, 60, '%') },
+    { sensor_type: 'motion', measurement: Math.random() > 0.5 ? 'yes' : 'no' },
+    { sensor_type: 'light', measurement: getRandomValue(100, 300, 'lx') }
+  ];
 
   try {
-    await pool.query(
-      `
-      UPDATE sensordata
-      SET sensor1 = $1, sensor2 = $2, sensor3 = $3, sensor4 = $4
-      WHERE user_id = $5
-      `,
-      [sensor1, sensor2, sensor3, sensor4, userId]
-    );
+    for (const reading of readings) {
+      await pool.query(
+        `
+        INSERT INTO sensordata (user_id, sensor_type, measurement)
+        VALUES ($1, $2, $3)
+        `,
+        [userId, reading.sensor_type, reading.measurement]
+      );
+    }
 
-    console.log(`✅ Updated data for user ${userId}`);
+    console.log(`✅ Inserted readings for user ${userId}`);
   } catch (err) {
-    console.error(`❌ Error updating user ${userId}:`, err.message);
+    console.error(`❌ Error inserting data for user ${userId}:`, err.message);
   }
 }
+
 
 async function feedLoop() {
   const userIds = [1, 2, 3];

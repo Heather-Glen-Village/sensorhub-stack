@@ -4,13 +4,24 @@ const express = require('express');
 const { Pool } = require('pg');
 const client = require('prom-client');
 
-// --- PostgreSQL Setup ---
-const db = new Pool({
+// --- PostgreSQL Connections ---
+
+// Auth DB (postgres-db)
+const authDb = new Pool({
   user: 'postgres',
-  host: 'host.docker.internal', // If inside Docker; use 'localhost' if outside
+  host: 'host.docker.internal',
   database: 'authdb',
   password: 'postgres',
   port: 5432,
+});
+
+// Timestamp DB (postgres-timestamps)
+const timestampDb = new Pool({
+  user: 'postgres',
+  host: 'host.docker.internal',
+  database: 'timestampsdb',
+  password: 'postgres',
+  port: 5435,
 });
 
 // --- MQTT Broker Setup ---
@@ -35,7 +46,7 @@ const malformedMessages = new client.Counter({
   help: 'Number of malformed or invalid MQTT messages',
 });
 
-const sensorGauges = {}; // Prometheus gauges by sensorType
+const sensorGauges = {};
 
 function getGauge(sensorType) {
   const sanitized = sensorType.replace(/[^a-zA-Z0-9_]/g, '_');
@@ -59,35 +70,39 @@ aedes.on('publish', async (packet, clientInfo) => {
 
   try {
     const data = JSON.parse(payload);
-
-    if (!('user_id' in data) || !('readings' in data)) {
-      throw new Error('Missing user_id or readings[]');
+    if (!('user_id' in data) || !Array.isArray(data.readings)) {
+      throw new Error('Missing user_id or invalid readings[]');
     }
 
     const { user_id, readings } = data;
-
     if (typeof user_id !== 'number') throw new Error('user_id must be a number');
-    if (!Array.isArray(readings)) throw new Error('readings must be an array');
 
     for (const reading of readings) {
-      if (
-        typeof reading.sensorType !== 'string' ||
-        typeof reading.measurement !== 'string'
-      ) {
+      const { sensorType, measurement } = reading;
+
+      if (typeof sensorType !== 'string' || typeof measurement !== 'string') {
         throw new Error(`Invalid reading: ${JSON.stringify(reading)}`);
       }
 
-      // Save to PostgreSQL
-      await db.query(
+      const timestamp = new Date();
+
+      // Insert into authdb (basic storage)
+      await authDb.query(
         'INSERT INTO sensordata (user_id, sensor_type, measurement) VALUES ($1, $2, $3)',
-        [user_id, reading.sensorType, reading.measurement]
+        [user_id, sensorType, measurement]
       );
 
-      // Update Prometheus only if measurement is numeric
-      const numericValue = parseFloat(reading.measurement);
+      // Insert into timestampsdb (with recorded_at)
+      await timestampDb.query(
+        'INSERT INTO sensordata (user_id, sensor_type, measurement, recorded_at) VALUES ($1, $2, $3, $4)',
+        [user_id, sensorType, measurement, timestamp]
+      );
+
+      // Prometheus numeric metrics
+      const numericValue = parseFloat(measurement);
       if (!isNaN(numericValue)) {
-        const gauge = getGauge(reading.sensorType);
-        gauge.set({ user_id: String(user_id), sensor_type: reading.sensorType }, numericValue);
+        const gauge = getGauge(sensorType);
+        gauge.set({ user_id: String(user_id), sensor_type: sensorType }, numericValue);
       }
     }
 
@@ -98,7 +113,7 @@ aedes.on('publish', async (packet, clientInfo) => {
   }
 });
 
-// --- HTTP Server for Prometheus ---
+// --- HTTP Server for Prometheus Metrics ---
 const METRICS_PORT = 9090;
 const app = express();
 
