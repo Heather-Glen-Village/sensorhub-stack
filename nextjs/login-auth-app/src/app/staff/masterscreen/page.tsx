@@ -16,8 +16,8 @@ interface SensorReading {
 export default function SensorDashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [readings, setReadings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [readingsByUser, setReadingsByUser] = useState<Record<number, Record<string, string>>>({});
 
   useEffect(() => {
     async function fetchUser() {
@@ -26,7 +26,7 @@ export default function SensorDashboard() {
         if (!res.ok) throw new Error('Unauthorized');
         const data = await res.json();
         setUser(data.user);
-        setToken(data.token); // assuming your /api/me returns { user, token }
+        setToken(data.token);
       } catch (err) {
         console.error('Failed to load user:', err);
         setUser(null);
@@ -47,14 +47,19 @@ export default function SensorDashboard() {
     socket.onmessage = (event) => {
       try {
         const rows: SensorReading[] = JSON.parse(event.data);
-        const userReadings = rows.filter(r => r.user_id === user.id);
 
-        const grouped: Record<string, string> = {};
-        for (const r of userReadings) {
-          grouped[r.sensor_type] = r.measurement;
+        const filteredRows = user.username === 'masterscreen'
+          ? rows
+          : rows.filter(r => r.user_id === user.id);
+
+        const grouped: Record<number, Record<string, string>> = {};
+
+        for (const r of filteredRows) {
+          if (!grouped[r.user_id]) grouped[r.user_id] = {};
+          grouped[r.user_id][r.sensor_type] = r.measurement;
         }
 
-        setReadings(grouped);
+        setReadingsByUser(grouped);
       } catch (err) {
         console.error('Error parsing WebSocket data:', err);
       }
@@ -71,19 +76,26 @@ export default function SensorDashboard() {
       <div className="max-w-xl mx-auto">
         <h1 className="text-2xl font-bold mb-4">Welcome, {user.username}!</h1>
 
-        {Object.keys(readings).length > 0 ? (
-          <div className="bg-white shadow rounded-lg p-4 border border-gray-200">
-            <h2 className="text-xl font-semibold text-blue-700 mb-2">Your Sensor Data</h2>
-            <ul className="space-y-1 text-gray-800">
-              {Object.entries(readings).map(([type, value]) => (
-                <li key={type}>
-                  <strong>{type.charAt(0).toUpperCase() + type.slice(1)}:</strong> {value}
-                </li>
-              ))}
-            </ul>
+        {Object.keys(readingsByUser).length > 0 ? (
+          <div className="bg-white shadow rounded-lg p-4 border border-gray-200 space-y-6">
+            <h2 className="text-xl font-semibold text-blue-700">Sensor Data</h2>
+            {Object.entries(readingsByUser).map(([userId, sensors]) => (
+              <div key={userId} className="border-t pt-2">
+                {user.username === 'masterscreen' && (
+                  <h3 className="text-md font-semibold text-gray-600">User ID: {userId}</h3>
+                )}
+                <ul className="text-gray-800">
+                  {Object.entries(sensors).map(([type, value]) => (
+                    <li key={type}>
+                      <strong>{type.charAt(0).toUpperCase() + type.slice(1)}:</strong> {value}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         ) : (
-          <p>No sensor data found for your account.</p>
+          <p>No sensor data found.</p>
         )}
       </div>
     </div>
