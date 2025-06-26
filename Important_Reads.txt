@@ -1,0 +1,7 @@
+Lots of folders have different .env variables.
+Update as developmenet progress but at the moment:
+
+nextjs/db-websocket
+nextjs/login-auth-app
+
+Both folders share the jwt private key in their .env files are are required for the full functionality.

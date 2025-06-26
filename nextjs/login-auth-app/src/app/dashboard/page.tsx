@@ -17,6 +17,8 @@ export default function SensorDashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [readings, setReadings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
+
 
   useEffect(() => {
     async function fetchUser() {
@@ -25,13 +27,16 @@ export default function SensorDashboard() {
         if (!res.ok) throw new Error('Unauthorized');
         const data = await res.json();
         setUser(data.user);
+        setToken(data.token); // 🔑 Store token
       } catch (err) {
         console.error('Failed to load user:', err);
         setUser(null);
+        setToken(null);
       } finally {
         setLoading(false);
       }
     }
+
 
     fetchUser();
   }, []);
@@ -39,7 +44,8 @@ export default function SensorDashboard() {
   useEffect(() => {
     if (!user) return;
 
-    const socket = new WebSocket('ws://localhost:8080');
+    const socket = new WebSocket(`ws://localhost:8080?token=${token}`);
+    console.log('Connecting to WebSocket with token:', token);
 
     socket.onmessage = (event) => {
       try {

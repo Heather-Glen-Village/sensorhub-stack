@@ -9,9 +9,6 @@ services:
     environment:
       - DATABASE_URL=postgres://postgres:postgres@postgres-db:5432/authdb
       - JWT_SECRET=super_secure_key
-    volumes:
-      - ./login-auth-app:/app:cached
-      - /app/node_modules
     working_dir: /app
     command: npm run dev
     networks:
