@@ -17,5 +17,5 @@ COPY . .
 EXPOSE 8080
 
 # Use Node.js ESM entry point
-CMD ["node", "--no-warnings", "--experimental-specifier-resolution=node", "websocket-server.mjs"]
+CMD ["node", "--no-warnings", "--experimental-specifier-resolution=node", "index.js"]
 
