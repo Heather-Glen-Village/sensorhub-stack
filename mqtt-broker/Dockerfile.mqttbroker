@@ -1,0 +1,20 @@
+# Base image
+FROM node:20
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files first for caching
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the code
+COPY . .
+
+# Expose the ports your broker needs
+EXPOSE 1883 9090
+
+# Start the broker
+CMD ["node", "index.js"]
