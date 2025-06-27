@@ -1,0 +1,133 @@
+services:
+  postgres-db:
+    image: postgres:15
+    container_name: postgres-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: authdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - /home/station3/Desktop/docker-file-shared/postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - shared-net
+
+  postgres-timestamps:
+    image: postgres:15
+    container_name: postgres-timestamps
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: timestampsdb
+    ports:
+      - "5435:5432"
+    volumes:
+      - /home/station3/Desktop/docker-file-shared/postgres-time-stamps:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - shared-net
+
+  mqtt-broker:
+    build:
+      context: ../mqtt-broker
+      dockerfile: Dockerfile.mqttbroker
+    container_name: mqtt-broker
+    ports:
+      - "1883:1883"
+      - "9090:9090"
+    restart: unless-stopped
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      postgres-timestamps:
+        condition: service_healthy
+    networks:
+      - shared-net
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - /home/station3/Desktop/docker-file-shared/prometheus_data:/prometheus
+    ports:
+      - "9091:9090"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      postgres-timestamps:
+        condition: service_healthy
+      mqtt-broker:
+        condition: service_started
+    networks:
+      - shared-net
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    volumes:
+      - /home/station3/Desktop/docker-file-shared/grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      postgres-timestamps:
+        condition: service_healthy
+      prometheus:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - shared-net
+
+  alertmanager:
+    image: prom/alertmanager
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager:/etc/alertmanager
+    restart: unless-stopped
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      postgres-timestamps:
+        condition: service_healthy
+    networks:
+      - shared-net
+
+  websocket:
+    build:
+      context: ../nextjs/db-websocket
+      dockerfile: Dockerfile.websocket
+    container_name: websocket-server
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres-db:5432/authdb
+      TIMESTAMP_DB_URL: postgres://postgres:postgres@postgres-timestamps:5432/timestampsdb
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      postgres-timestamps:
+        condition: service_healthy
+      prometheus:
+        condition: service_started
+    networks:
+      - shared-net
+
+networks:
+  shared-net:
+    external: true

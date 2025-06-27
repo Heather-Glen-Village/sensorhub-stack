@@ -1,0 +1,24 @@
+# groups:
+#   - name: always-fire
+#     rules:
+#       - alert: TestEmailAlert
+#         expr: vector(1)  # always evaluates to true
+#         for: 15s
+#         labels:
+#           severity: critical
+#         annotations:
+#           summary: "🚨 Test Alert Fired"
+#           description: "This is a test alert to verify email routing through Alertmanager."
+
+
+groups:
+  - name: temperature-alerts
+    rules:
+      - alert: HighThermostatTemperature
+        expr: thermostat_temperature > 35
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "🔥 High Temperature Detected"
+          description: "Thermostat temperature is {{ $value }}°C, which exceeds the threshold of 35°C."
