@@ -3,8 +3,6 @@ function isEqual(a, b) {
     Object.keys(a).every(k => a[k] === b[k]);
 }
 
-const index = alerts.findIndex(a => isEqual(a, target));
-
 
 
 //this is a very slow and inefficient way to do these checks and in the case we
