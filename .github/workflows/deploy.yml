@@ -1,0 +1,16 @@
+name: Deploy on Push to Main
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  webhook:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send webhook to deploy server
+        run: |
+          curl -X POST https://75b5-206-210-109-100.ngrok-free.app/webhook \
+            -H 'Content-Type: application/json' \
+            -d '{"secret": "supersecret"}'
