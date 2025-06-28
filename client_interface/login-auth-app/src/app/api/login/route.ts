@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { Pool } from 'pg';
+import { Pool } from '../../../../node_modules/@types/pg';
 import jwt from 'jsonwebtoken';
 
 interface User {

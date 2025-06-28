@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
-import { Pool } from 'pg';
+import { Pool } from '../../../../node_modules/@types/pg';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
