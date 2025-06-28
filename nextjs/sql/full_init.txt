@@ -46,3 +46,16 @@ INSERT INTO sensordata (user_id, sensor_type, measurement, created_at) VALUES
   (4, 'humidity', '55%', '2025-05-31 02:25:03.275663'),
   (4, 'co2', '415ppm', '2025-05-31 02:25:03.275663'),
   (4, 'motion', 'Motion detected', '2025-05-31 02:25:03.275663');
+
+
+CREATE TABLE alerts (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),
+  sensor_type TEXT,
+  measurement TEXT,
+  severity TEXT, -- e.g., 'low', 'medium', 'high'
+  message TEXT,
+  triggered_at TIMESTAMP DEFAULT NOW(),
+  acknowledged BOOLEAN DEFAULT FALSE,
+  resolved BOOLEAN DEFAULT FALSE
+);

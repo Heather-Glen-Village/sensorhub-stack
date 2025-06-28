@@ -3,6 +3,7 @@ export function evaluateAlerts(sensorRows) {
 
   for (const row of sensorRows) {
     if (row.sensor_type === 'temperature' && parseFloat(row.measurement) > 70) {
+
       alerts.push({
         user_id: row.user_id,
         sensor_type: row.sensor_type,
