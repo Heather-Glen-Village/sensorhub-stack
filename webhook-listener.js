@@ -22,12 +22,14 @@ const server = http.createServer((req, res) => {
           docker stop $(docker ps -aq) || true &&
           docker rm -f next-auth-app || true &&
 
-          cd /home/station3/Desktop/sensorhub-stack/server_compose &&
-          git fetch origin && git reset --hard origin/main &&
+          cd /home/station3/Desktop/sensorhub-stack &&
+          git fetch origin &&
+          git reset --hard origin/main &&
+
+          cd server_compose &&
           docker compose up -d --build &&
 
-          cd /home/station3/Desktop/sensorhub-stack/client_interface &&
-          git fetch origin && git reset --hard origin/main &&
+          cd ../client_interface &&
           docker compose up -d --build
         `;
 
