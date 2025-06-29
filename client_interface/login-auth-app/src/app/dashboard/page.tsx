@@ -41,16 +41,15 @@ export default function SensorDashboard() {
     fetchUser();
   }, []);
 
-  // keep userRef in sync
   useEffect(() => {
     userRef.current = user;
   }, [user]);
 
   useEffect(() => {
-    if (!user || !token) return;
+    if (!user) return;
 
-    const socket = new WebSocket(`ws://localhost:8080?token=${token}`);
-    console.log('Connecting to WebSocket with token:', token);
+    const socket = new WebSocket(`ws://${window.location.host}/api/ws`);
+    console.log('🔌 Connecting to /api/ws WebSocket');
 
     socket.onmessage = (event) => {
       try {
@@ -67,12 +66,15 @@ export default function SensorDashboard() {
 
         setReadings(grouped);
       } catch (err) {
-        console.error('Error parsing WebSocket data:', err);
+        console.error('❌ Error parsing WebSocket data:', err);
       }
     };
 
+    socket.onerror = (e) => console.error('WebSocket error:', e);
+    socket.onclose = () => console.log('WebSocket connection closed');
+
     return () => socket.close();
-  }, [token]); // ✅ depends only on token, user handled via ref
+  }, [user]);
 
   if (loading) return <div>Loading...</div>;
   if (!user) return <div>You are not authorized. Please log in.</div>;
