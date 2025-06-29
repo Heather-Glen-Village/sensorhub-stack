@@ -9,7 +9,7 @@ export default function HomePage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-gray-100 px-4 py-12 sm:px-6 lg:px-8">
       <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-6 text-gray-800">
-        Heather Glen Village Residential Website
+        Heather Glen Village Residential Website test
       </h1>
       <button
         onClick={handleLogin}
