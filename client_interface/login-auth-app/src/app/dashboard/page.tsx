@@ -42,7 +42,7 @@ export default function SensorDashboard() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !token) return;
 
     const socket = new WebSocket(`ws://localhost:8080?token=${token}`);
     console.log('Connecting to WebSocket with token:', token);
