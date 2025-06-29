@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface User {
   id: number;
@@ -19,6 +19,7 @@ export default function SensorDashboard() {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
 
+  const userRef = useRef<User | null>(null);
 
   useEffect(() => {
     async function fetchUser() {
@@ -27,7 +28,7 @@ export default function SensorDashboard() {
         if (!res.ok) throw new Error('Unauthorized');
         const data = await res.json();
         setUser(data.user);
-        setToken(data.token); // 🔑 Store token
+        setToken(data.token);
       } catch (err) {
         console.error('Failed to load user:', err);
         setUser(null);
@@ -37,9 +38,13 @@ export default function SensorDashboard() {
       }
     }
 
-
     fetchUser();
   }, []);
+
+  // keep userRef in sync
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   useEffect(() => {
     if (!user || !token) return;
@@ -49,6 +54,9 @@ export default function SensorDashboard() {
 
     socket.onmessage = (event) => {
       try {
+        const user = userRef.current;
+        if (!user) return;
+
         const rows: SensorReading[] = JSON.parse(event.data);
         const userReadings = rows.filter(r => r.user_id === user.id);
 
@@ -64,7 +72,7 @@ export default function SensorDashboard() {
     };
 
     return () => socket.close();
-  }, [user]);
+  }, [token]); // ✅ depends only on token, user handled via ref
 
   if (loading) return <div>Loading...</div>;
   if (!user) return <div>You are not authorized. Please log in.</div>;
