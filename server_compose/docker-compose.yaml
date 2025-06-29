@@ -110,7 +110,7 @@ services:
 
   websocket:
     build:
-      context: ../nextjs/db-websocket
+      context: ../client_interface/db-websocket
       dockerfile: Dockerfile.websocket
     container_name: websocket-server
     ports:
