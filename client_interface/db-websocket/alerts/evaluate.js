@@ -1,45 +1,50 @@
-function isEqual(a, b) {
-  return Object.keys(a).length === Object.keys(b).length &&
-    Object.keys(a).every(k => a[k] === b[k]);
+import { pool } from './db'; // assuming pool is exported from your db module
+
+async function alertExists(row) {
+  const result = await pool.query(
+    `SELECT 1 FROM alerts WHERE user_id = $1 AND sensor_type = $2 AND measurement = $3 LIMIT 1`,
+    [row.user_id, row.sensor_type, row.measurement]
+  );
+  return result.rowCount > 0;
 }
 
-
-
-//this is a very slow and inefficient way to do these checks and in the case we
-//have many more readings and readings in shorter intervals this will not scale well
-export function evaluateAlerts(sensorRows) {
-  const alerts = [];
+export async function evaluateAlerts(sensorRows) {
+  const newAlerts = [];
 
   for (const row of sensorRows) {
     if (row.sensor_type === 'temperature') {
+      const temp = parseFloat(row.measurement);
 
-      if (parseFloat(row.measurement) > 70){
-        alerts.push({
-        user_id: row.user_id,
-        sensor_type: row.sensor_type,
-        measurement: row.measurement,
-        severity: 'high',
-        message: '🔥 High temperature detected'
-        });
-      }
+      if (temp > 70) {
+        const exists = await alertExists(row);
+        if (!exists) {
+          const alert = {
+            user_id: row.user_id,
+            sensor_type: row.sensor_type,
+            measurement: row.measurement,
+            severity: 'high',
+            message: '🔥 High temperature detected'
+          };
 
-      else if (parseFloat(row.measurement)>0){
+          await pool.query(
+            `INSERT INTO alerts (user_id, sensor_type, measurement, severity, message)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [alert.user_id, alert.sensor_type, alert.measurement, alert.severity, alert.message]
+          );
 
-        //safe and readable way of doing this
-        //however it is planned we switch over to a hashmap or simular structure for O(1) lookups
-        for (let i = alerts.length - 1; i >= 0; i--) {
-          if (isEqual(alerts[i], row)) {
-            alerts.splice(i, 1);
-          }
+          newAlerts.push(alert);
         }
+      } else if (temp > 0) {
+        // Remove resolved alerts from DB
+        await pool.query(
+          `DELETE FROM alerts WHERE user_id = $1 AND sensor_type = $2`,
+          [row.user_id, row.sensor_type]
+        );
       }
     }
-    // Add more rules here
 
-
-
-
+    // You can extend this block with more sensor types and logic
   }
 
-  return alerts;
+  return newAlerts;
 }
