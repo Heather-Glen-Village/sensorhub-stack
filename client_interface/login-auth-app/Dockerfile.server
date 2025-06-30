@@ -1,21 +1,24 @@
-# Use official Node.js image
+# Use official Node.js Alpine image
 FROM node:20-alpine
 
 # Create app directory
 WORKDIR /app
 
-# Copy package files and install deps
+# Install necessary build tools for ts-node and Alpine
+RUN apk add --no-cache python3 make g++ 
+
+# Copy package files and install dependencies
 COPY package*.json ./
 RUN npm install
-
-# Copy the rest of the app
-COPY . .
 
 # Install ts-node and typescript globally
 RUN npm install -g ts-node typescript
 
-# Expose your Next.js port
+# Copy the rest of the app
+COPY . .
+
+# Expose the port (adjust if needed)
 EXPOSE 3000
 
-# Run the custom WebSocket + Next.js server
+# Run the TypeScript server using ts-node
 CMD ["ts-node", "server.ts"]
