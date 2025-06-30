@@ -80,7 +80,7 @@ services:
     volumes:
       - /home/station3/Desktop/docker-file-shared/grafana_data:/var/lib/grafana
     ports:
-      - "3001:3000"
+      - "3002:3000"
     depends_on:
       postgres-db:
         condition: service_healthy
