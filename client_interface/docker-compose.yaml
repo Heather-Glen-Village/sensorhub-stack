@@ -14,6 +14,23 @@ services:
     networks:
       - shared-net
 
+  websocket-relay:
+    build:
+      context: ./login-auth-app
+      dockerfile: Dockerfile.server
+    container_name: websocket-relay
+    ports:
+      - "3001:3001" # Or whatever internal port server.ts listens on
+    environment:
+      - NODE_ENV=development
+    working_dir: /app
+    command: ts-node server.ts
+    depends_on:
+      - nextjs
+    networks:
+      - shared-net
+
+
 networks:
   shared-net:
     external: true
