@@ -21,4 +21,4 @@ COPY . .
 EXPOSE 3000
 
 # Run the TypeScript server using ts-node
-CMD ["ts-node", "server.ts"]
+CMD ["ts-node", "--loader", "ts-node/esm", "server.ts"]
