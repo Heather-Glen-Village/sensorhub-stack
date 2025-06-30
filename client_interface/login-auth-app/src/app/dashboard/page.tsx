@@ -29,8 +29,9 @@ export default function SensorDashboard() {
         const data = await res.json();
         setUser(data.user);
         setToken(data.token);
+        console.log('✅ Fetched user:', data.user);
       } catch (err) {
-        console.error('Failed to load user:', err);
+        console.error('❌ Failed to load user:', err);
         setUser(null);
         setToken(null);
       } finally {
@@ -48,13 +49,20 @@ export default function SensorDashboard() {
   useEffect(() => {
     if (!user) return;
 
-    const socket = new WebSocket(`ws://${window.location.host}/api/ws`);
-    console.log('🔌 Connecting to /api/ws WebSocket');
+    const wsUrl = 'ws://localhost:3001'; // Change if needed
+    console.log(`🔌 Attempting to connect to WebSocket: ${wsUrl}`);
+    const socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+      console.log('🟢 WebSocket connection opened');
+    };
 
     socket.onmessage = (event) => {
       try {
         const user = userRef.current;
         if (!user) return;
+
+        console.log('📩 Raw message:', event.data);
 
         const rows: SensorReading[] = JSON.parse(event.data);
         const userReadings = rows.filter(r => r.user_id === user.id);
@@ -64,16 +72,25 @@ export default function SensorDashboard() {
           grouped[r.sensor_type] = r.measurement;
         }
 
+        console.log('📦 Parsed sensor data:', grouped);
         setReadings(grouped);
       } catch (err) {
         console.error('❌ Error parsing WebSocket data:', err);
       }
     };
 
-    socket.onerror = (e) => console.error('WebSocket error:', e);
-    socket.onclose = () => console.log('WebSocket connection closed');
+    socket.onerror = (e) => {
+      console.error('🔴 WebSocket error:', e);
+    };
 
-    return () => socket.close();
+    socket.onclose = (e) => {
+      console.warn('🔌 WebSocket closed:', e.code, e.reason);
+    };
+
+    return () => {
+      console.log('🔌 Closing WebSocket connection');
+      socket.close();
+    };
   }, [user]);
 
   if (loading) return <div>Loading...</div>;
