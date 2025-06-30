@@ -20,5 +20,5 @@ COPY . .
 # Expose the port (adjust if needed)
 EXPOSE 3000
 
-# Run the TypeScript server using ts-node
-CMD ["ts-node", "--loader", "ts-node/esm", "server.ts"]
+# (your current Dockerfile content is good)
+CMD ["node", "--loader", "ts-node/esm", "server.ts"]
