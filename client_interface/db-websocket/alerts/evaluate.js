@@ -1,4 +1,4 @@
-import { pool } from './db'; // assuming pool is exported from your db module
+import { pool } from './db'; // assumes pool is exported from your db module
 
 async function alertExists(row) {
   const result = await pool.query(
@@ -9,7 +9,8 @@ async function alertExists(row) {
 }
 
 export async function evaluateAlerts(sensorRows) {
-  const newAlerts = [];
+  const alertsToInsert = [];
+  // Optional: const alertsToResolve = [];
 
   for (const row of sensorRows) {
     if (row.sensor_type === 'temperature') {
@@ -18,33 +19,29 @@ export async function evaluateAlerts(sensorRows) {
       if (temp > 70) {
         const exists = await alertExists(row);
         if (!exists) {
-          const alert = {
+          alertsToInsert.push({
             user_id: row.user_id,
             sensor_type: row.sensor_type,
             measurement: row.measurement,
             severity: 'high',
             message: '🔥 High temperature detected'
-          };
-
-          await pool.query(
-            `INSERT INTO alerts (user_id, sensor_type, measurement, severity, message)
-             VALUES ($1, $2, $3, $4, $5)`,
-            [alert.user_id, alert.sensor_type, alert.measurement, alert.severity, alert.message]
-          );
-
-          newAlerts.push(alert);
+          });
         }
-      } else if (temp > 0) {
-        // Remove resolved alerts from DB
-        await pool.query(
-          `DELETE FROM alerts WHERE user_id = $1 AND sensor_type = $2`,
-          [row.user_id, row.sensor_type]
-        );
       }
+
+      // Optional: track resolved alerts instead of deleting them here
+      // else if (temp > 0) {
+      //   alertsToResolve.push({
+      //     user_id: row.user_id,
+      //     sensor_type: row.sensor_type
+      //   });
+      // }
     }
 
-    // You can extend this block with more sensor types and logic
+    // Add more sensor types and alert logic here
   }
 
-  return newAlerts;
+  return alertsToInsert;
+  // Or return both:
+  // return { alertsToInsert, alertsToResolve };
 }
