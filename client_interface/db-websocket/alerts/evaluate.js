@@ -17,7 +17,15 @@ export async function evaluateAlerts(sensorRows) {
       const temp = parseFloat(row.measurement);
 
       if (temp > 70) {
-        const exists = await alertExists(row);
+        const exists = await pool.query(
+          `SELECT 1 FROM alerts WHERE user_id = $1 AND sensor_type = $2 LIMIT 1`,
+          [row.user_id, row.sensor_type]
+        );
+
+        if (exists.rowCount > 0) {
+          // alert exists for that user and sensor type
+        }
+
         // console.log("row exists in table:", exists, "row value:",row);
         if (!exists) {
           alertsToInsert.push({
