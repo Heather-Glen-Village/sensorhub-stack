@@ -1,5 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 interface User {
   id: number;
@@ -72,6 +74,8 @@ export default function SensorDashboard() {
   if (!user) return <div>You are not authorized. Please log in.</div>;
 
   return (
+    <>
+    <Header></Header>
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-xl mx-auto">
         <h1 className="text-2xl font-bold mb-4">Welcome, {user.username}!</h1>
@@ -99,5 +103,7 @@ export default function SensorDashboard() {
         )}
       </div>
     </div>
+        <Footer></Footer>
+    </>
   );
 }
