@@ -25,9 +25,7 @@ export async function evaluateAlerts(sensorRows) {
         if (exists.rowCount > 0) {
           // alert exists for that user and sensor type
         }
-
-        // console.log("row exists in table:", exists, "row value:",row);
-        if (!exists) {
+        if (exists.rowCount == 0) {
           alertsToInsert.push({
             user_id: row.user_id,
             sensor_type: row.sensor_type,
