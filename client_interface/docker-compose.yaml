@@ -16,7 +16,7 @@ services:
 
   websocket-connection:
     build:
-      context: ./websocket-connection
+      context: ./db-websocket
       dockerfile: Dockerfile.websocket  # or Dockerfile.ws if you named it differently
     container_name: websocket-connection
     ports:
