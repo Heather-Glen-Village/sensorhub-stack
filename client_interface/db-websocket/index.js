@@ -20,6 +20,7 @@ async function checkSensorData() {
     lastData = rawJson;
 
     const alerts = evaluateAlerts(rows);
+    console.log(alerts);
     await saveAndBroadcastAlerts(alerts, wss);
 
     console.log('📤 Broadcasted updated sensor data + alerts');
