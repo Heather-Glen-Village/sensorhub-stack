@@ -18,7 +18,7 @@ export async function evaluateAlerts(sensorRows) {
 
       if (temp > 70) {
         const exists = await alertExists(row);
-        console.log(exists, row);
+        console.log("row exists in table:", exists, "row value:",row);
         if (!exists) {
           alertsToInsert.push({
             user_id: row.user_id,
