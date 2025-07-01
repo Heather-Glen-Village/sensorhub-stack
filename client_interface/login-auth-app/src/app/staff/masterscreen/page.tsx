@@ -30,7 +30,40 @@ export default function SensorDashboard() {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [readingsByUser, setReadingsByUser] = useState<Record<number, Record<string, string>>>({});
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  // const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([
+  {
+    user_id: 1,
+    sensor_type: 'temperature',
+    measurement: '75.2',
+    severity: 'high',
+    message: '🔥 High temperature detected',
+  },
+  {
+    user_id: 2,
+    sensor_type: 'humidity',
+    measurement: '19%',
+    severity: 'low',
+    message: '💧 Low humidity detected',
+  },
+  {
+    user_id: 3,
+    sensor_type: 'motion',
+    measurement: 'yes',
+    severity: 'medium',
+    message: '🚨 Unexpected motion detected',
+  },
+  {
+    user_id: 1,
+    sensor_type: 'light',
+    measurement: '900lx',
+    severity: 'low',
+    message: '💡 High light intensity',
+  },
+]);
+
+
+
 
   useEffect(() => {
     async function fetchUser() {
