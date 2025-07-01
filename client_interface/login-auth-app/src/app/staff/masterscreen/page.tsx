@@ -95,7 +95,7 @@ export default function SensorDashboard() {
         const data = JSON.parse(event.data);
 
         const rows: SensorReading[] = data.sensorRows ?? data;
-        const alertRows: Alert[] = data.alerts ?? [];
+        const alertRows: Alert[] = Array.isArray(data.alerts) ? data.alerts : alerts;
 
         const filteredRows = user.username === 'masterscreen'
           ? rows
