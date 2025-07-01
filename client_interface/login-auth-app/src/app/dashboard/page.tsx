@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
+import Header from '@/components/Header';
 
 interface User {
   id: number;
@@ -79,6 +80,7 @@ export default function SensorDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
+      <Header></Header>
       <div className="max-w-xl mx-auto">
         <h1 className="text-2xl font-bold mb-4">Welcome, {user.username}!</h1>
 
