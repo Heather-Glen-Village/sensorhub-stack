@@ -14,11 +14,11 @@ export default function Header() {
           <a href="/dashboard" className="text-gray-600 hover:text-blue-600 transition">
             Dashboard
           </a>
-          <a href="/alerts" className="text-gray-600 hover:text-blue-600 transition">
-            Alerts
+          <a href="/staff/masterscreen" className="text-gray-600 hover:text-blue-600 transition">
+            Admin
           </a>
-          <a href="/settings" className="text-gray-600 hover:text-blue-600 transition">
-            Settings
+          <a href="/login" className="text-gray-600 hover:text-blue-600 transition">
+            Login
           </a>
         </nav>
       </div>
