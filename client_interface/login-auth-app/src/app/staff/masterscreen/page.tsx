@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import SensorData from './sensordata';
+import AlertPanel from './alert';
 
 interface User {
   id: number;
@@ -59,7 +61,6 @@ export default function SensorDashboard() {
       try {
         const data = JSON.parse(event.data);
 
-        // Assume socket sends both sensor rows and alerts
         const rows: SensorReading[] = data.sensorRows ?? data;
         const alertRows: Alert[] = data.alerts ?? [];
 
@@ -94,47 +95,12 @@ export default function SensorDashboard() {
     <>
       <Header />
       <div className="min-h-screen bg-gray-100 p-6">
-        <div className="max-w-xl mx-auto">
-          <h1 className="text-2xl font-bold mb-4">Welcome, {user.username}!</h1>
-
-          {/* Sensor Readings */}
-          {Object.keys(readingsByUser).length > 0 ? (
-            <div className="bg-white shadow rounded-lg p-4 border border-gray-200 space-y-6 mb-8">
-              <h2 className="text-xl font-semibold text-blue-700">Sensor Data</h2>
-              {Object.entries(readingsByUser).map(([userId, sensors]) => (
-                <div key={userId} className="border-t pt-2">
-                  {user.username === 'masterscreen' && (
-                    <h3 className="text-md font-semibold text-gray-600">User ID: {userId}</h3>
-                  )}
-                  <ul className="text-gray-800">
-                    {Object.entries(sensors).map(([type, value]) => (
-                      <li key={type}>
-                        <strong>{type.charAt(0).toUpperCase() + type.slice(1)}:</strong> {value}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p>No sensor data found.</p>
-          )}
-
-          {/* Alerts Section */}
-          <div className="bg-white shadow rounded-lg p-4 border border-gray-200 space-y-4">
-            <h2 className="text-xl font-semibold text-red-600">Active Alerts</h2>
-            {alerts.length > 0 ? (
-              <ul className="space-y-2">
-                {alerts.map((alert, index) => (
-                  <li key={index} className="text-sm text-gray-700">
-                    <span className="font-semibold">{alert.sensor_type}:</span> {alert.message} – 
-                    <span className="ml-1 text-xs text-gray-500">({alert.measurement})</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-gray-500">No active alerts.</p>
-            )}
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6">
+          <div className="flex-1">
+            <SensorData readingsByUser={readingsByUser} isMaster={user.username === 'masterscreen'} />
+          </div>
+          <div className="w-full lg:w-80 shrink-0">
+            <AlertPanel alerts={alerts} />
           </div>
         </div>
       </div>
