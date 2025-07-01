@@ -1,4 +1,4 @@
-import { pool } from './db'; // assumes pool is exported from your db module
+import { pool } from './db.js'; // assumes pool is exported from your db module
 
 async function alertExists(row) {
   const result = await pool.query(
