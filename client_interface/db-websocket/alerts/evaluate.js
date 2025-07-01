@@ -13,6 +13,7 @@ export async function evaluateAlerts(sensorRows) {
   // Optional: const alertsToResolve = [];
 
   for (const row of sensorRows) {
+    //temperature alerts
     if (row.sensor_type === 'temperature') {
       const temp = parseFloat(row.measurement);
 
@@ -22,9 +23,6 @@ export async function evaluateAlerts(sensorRows) {
           [row.user_id, row.sensor_type]
         );
 
-        if (exists.rowCount > 0) {
-          // alert exists for that user and sensor type
-        }
         if (exists.rowCount == 0) {
           alertsToInsert.push({
             user_id: row.user_id,
@@ -34,6 +32,36 @@ export async function evaluateAlerts(sensorRows) {
             message: '🔥 High temperature detected'
           });
         }
+      }
+      else if(temp < 10) {
+        const exists = await pool.query(
+          `SELECT 1 FROM alerts WHERE user_id = $1 AND sensor_type = $2 LIMIT 1`,
+          [row.user_id, row.sensor_type]
+        );
+
+        if (exists.rowCount > 0) {
+          await pool.query(
+            `DELETE FROM alerts WHERE user_id = $1 AND sensor_type = $2`,
+            [row.user_id, row.sensor_type]
+          ); console.log("clearing high temp alert");
+        }
+
+
+        if (exists.rowCount == 0) {
+          alertsToInsert.push({
+            user_id: row.user_id,
+            sensor_type: row.sensor_type,
+            measurement: row.measurement,
+            severity: 'low',
+            message: '❄️ Low temperature detected'
+          });
+        }
+      }
+      else{
+        await pool.query(
+            `DELETE FROM alerts WHERE user_id = $1 AND sensor_type = $2`,
+            [row.user_id, row.sensor_type]
+          ); console.log("removing alerts");
       }
 
       // Optional: track resolved alerts instead of deleting them here
