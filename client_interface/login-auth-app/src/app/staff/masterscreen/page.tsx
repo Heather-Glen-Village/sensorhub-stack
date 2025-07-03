@@ -127,12 +127,12 @@ export default function SensorDashboard() {
   return (
     <>
       <Header />
-      <div className="min-h-screen bg-gray-100 p-6">
+      <div className="min-h-[50vh] bg-gray-100 p-6">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6">
           <div className="flex-1">
             <SensorData readingsByUser={readingsByUser} isMaster={user.username === 'masterscreen'} />
           </div>
-          <div className="w-full lg:w-80 shrink-0">
+          <div className="w-[20vw] lg:w-60 shrink-0">
             <AlertPanel alerts={alerts} />
           </div>
         </div>
