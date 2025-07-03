@@ -151,6 +151,7 @@ export default function SensorDashboard() {
         </div>
       </div>
 
+
       <Footer />
     </>
   );
