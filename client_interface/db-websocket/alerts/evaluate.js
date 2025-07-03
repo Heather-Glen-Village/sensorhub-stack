@@ -50,4 +50,6 @@ export async function evaluateAlerts(sensorRows) {
 
     // Add other sensor types here in the same structure
   }
+
+  return []; // Return an empty array since we're handling DB updates directly
 }
