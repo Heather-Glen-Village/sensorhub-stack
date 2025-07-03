@@ -5,6 +5,12 @@ import Footer from '@/components/Footer';
 import SensorData from './sensordata';
 import AlertPanel from './alert';
 
+declare global {
+  interface Window {
+    websocket?: WebSocket;
+  }
+}
+
 interface User {
   id: number;
   username: string;
@@ -61,6 +67,7 @@ export default function SensorDashboard() {
   if (!user || !token) return;
 
   const socket = new WebSocket(`ws://localhost:8080?token=${token}`);
+  window.websocket = socket;
 
   socket.onmessage = (event) => {
     try {
