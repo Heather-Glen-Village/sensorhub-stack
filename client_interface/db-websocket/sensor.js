@@ -8,3 +8,14 @@ export async function getLatestSensorData() {
   `);
   return result.rows;
 }
+
+export async function getLatestAlertData() {
+  const result = await pool.query(`
+    SELECT id, user_id, sensor_type, measurement, severity, message, status, created_at
+    FROM alerts
+    ORDER BY created_at DESC
+  `);
+
+  return result.rows;
+}
+
