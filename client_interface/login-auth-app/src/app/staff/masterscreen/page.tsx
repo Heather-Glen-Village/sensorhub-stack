@@ -29,7 +29,7 @@ interface Alert {
   measurement: string;
   severity: string;
   message: string;
-  helpText: string;
+  helpText: string; // optional if not used yet
 }
 
 export default function SensorDashboard() {
@@ -37,12 +37,9 @@ export default function SensorDashboard() {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [readingsByUser, setReadingsByUser] = useState<Record<number, Record<string, string>>>({});
-  // const [alerts, setAlerts] = useState<Alert[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
 
-
-
-
+  // Fetch authenticated user
   useEffect(() => {
     async function fetchUser() {
       try {
@@ -63,46 +60,53 @@ export default function SensorDashboard() {
     fetchUser();
   }, []);
 
+  // Setup WebSocket connection
   useEffect(() => {
-  if (!user || !token) return;
+    if (!user || !token) return;
 
-  const socket = new WebSocket(`ws://localhost:8080?token=${token}`);
-  window.websocket = socket;
+    const socket = new WebSocket(`ws://localhost:8080?token=${token}`);
+    window.websocket = socket;
 
-  socket.onmessage = (event) => {
-    try {
-      const { type, data } = JSON.parse(event.data);
+    socket.onopen = () => console.log("🟢 WebSocket connected");
+    socket.onerror = (e) => console.error("❌ WebSocket error", e);
+    socket.onclose = () => console.log("🔌 WebSocket closed");
 
-      if (type === 'sensor') {
-        const filteredRows = user.username === 'masterscreen'
-          ? data
-          : data.filter((r: SensorReading) => r.user_id === user.id);
+    socket.onmessage = (event) => {
+      console.log("📩 WebSocket received:", event.data);
 
-        const grouped: Record<number, Record<string, string>> = {};
-        for (const r of filteredRows) {
-          if (!grouped[r.user_id]) grouped[r.user_id] = {};
-          grouped[r.user_id][r.sensor_type] = r.measurement;
+      try {
+        const { type, data } = JSON.parse(event.data);
+
+        if (type === 'sensor') {
+          const filteredRows = user.username === 'masterscreen'
+            ? data
+            : data.filter((r: SensorReading) => r.user_id === user.id);
+
+          const grouped: Record<number, Record<string, string>> = {};
+          for (const r of filteredRows) {
+            if (!grouped[r.user_id]) grouped[r.user_id] = {};
+            grouped[r.user_id][r.sensor_type] = r.measurement;
+          }
+          setReadingsByUser(grouped);
         }
-        setReadingsByUser(grouped);
+
+        if (type === 'alert') {
+          const filteredAlerts = user.username === 'masterscreen'
+            ? data
+            : data.filter((a: Alert) => a.user_id === user.id);
+          setAlerts(filteredAlerts);
+        }
+
+      } catch (err) {
+        console.error('Error parsing WebSocket message:', err);
       }
+    };
 
-      if (type === 'alert') {
-        const filteredAlerts = user.username === 'masterscreen'
-          ? data
-          : data.filter((a: Alert) => a.user_id === user.id);
-        setAlerts(filteredAlerts);
-      }
+    return () => socket.close();
+  }, [user, token]);
 
-    } catch (err) {
-      console.error('Error parsing WebSocket message:', err);
-    }
-  };
-
-  return () => socket.close();
-}, [user, token]);
-
-  // if (loading) return <div>Loading...</div>;
-  // if (!user) return <div>You are not authorized. Please log in.</div>;
+  if (loading) return <div>Loading...</div>;
+  if (!user) return <div>You are not authorized. Please log in.</div>;
 
   return (
     <>
@@ -110,12 +114,12 @@ export default function SensorDashboard() {
       <div className="min-h-[50vh] bg-gray-100 p-6">
         <div className="max-w-xl mx-auto flex flex-col lg:flex-row gap-6">
           <div className="flex-1">
-            {/* <SensorData readingsByUser={readingsByUser} isMaster={user.username === 'masterscreen'} /> */}
+            <SensorData readingsByUser={readingsByUser} isMaster={user.username === 'masterscreen'} />
           </div>
-          <div className="w-[90vw]shrink-0">
-             <AlertPanel
+          <div className="w-[90vw] shrink-0">
+            <AlertPanel
               alerts={alerts}
-             onResolve={(alert) => {
+              onResolve={(alert) => {
                 setAlerts(prev => prev.filter(a => a !== alert));
               }}
             />
