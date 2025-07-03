@@ -11,9 +11,9 @@ export async function getLatestSensorData() {
 
 export async function getLatestAlertData() {
   const result = await pool.query(`
-    SELECT id, user_id, sensor_type, measurement, severity, message, status, created_at
+    SELECT id, user_id, sensor_type, measurement, severity, message, status, triggered_at
     FROM alerts
-    ORDER BY created_at DESC
+    ORDER BY triggered_at DESC
   `);
 
   return result.rows;
