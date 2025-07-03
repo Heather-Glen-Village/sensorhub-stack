@@ -5,22 +5,30 @@ import { verifyToken } from './auth.js';
 import { getLatestSensorData, getLatestAlertData } from './sensor.js';
 
 const wss = new WebSocketServer({ port: 8080 });
-console.log('WebSocket server listening on ws://localhost:8080');
+console.log('📡 WebSocket server listening on ws://localhost:8080');
 
 let lastSensorData = null;
 let latestAlerts = [];
 
 async function checkSensorData() {
-  const rows = await getLatestSensorData();
-  const rawJson = JSON.stringify(rows);
+  console.log('🔁 Running checkSensorData');
 
+  const rows = await getLatestSensorData();
+  console.log('📦 Latest sensor rows:', rows);
+
+  const rawJson = JSON.stringify(rows);
   const sensorDataChanged = rawJson !== lastSensorData;
+
   if (sensorDataChanged) {
+    console.log('✅ Sensor data changed');
     lastSensorData = rawJson;
+  } else {
+    console.log('➖ Sensor data unchanged');
   }
 
-  const alerts = await getLatestAlertData(); // Fetch all alerts (with status)
-  console.log("🔍 getLatestAlertData returned:", alerts);
+  const alerts = await getLatestAlertData();
+  console.log("📢 getLatestAlertData returned:", alerts);
+
   latestAlerts = alerts;
 
   const alertMessage = {
@@ -29,44 +37,52 @@ async function checkSensorData() {
   };
 
   wss.clients.forEach((client) => {
-    if (client.readyState !== 1 || !client.user) return;
+    if (client.readyState !== 1 || !client.user) {
+      console.log('⚠️ Skipping inactive or unauthenticated client');
+      return;
+    }
 
     const isMaster = client.user.username === 'masterscreen';
+    console.log(`📨 Preparing data for ${client.user.username}`);
 
     const userRows = isMaster
       ? rows
       : rows.filter((r) => r.user_id === client.user.id);
 
-    // Send updated sensor data if changed
     if (sensorDataChanged) {
+      console.log(`📤 Sending sensor data to ${client.user.username}`);
       client.send(JSON.stringify({ type: 'sensor', data: userRows }));
     }
 
-    // Always send alert data to masterscreen
     if (isMaster) {
+      console.log(`🚨 Sending alert data to ${client.user.username}`);
       client.send(JSON.stringify(alertMessage));
     }
   });
 
   console.log(
-    `📤 ${sensorDataChanged ? 'Sensor data' : 'No sensor change'}, alerts sent to masterscreen`
+    `🟢 Broadcast complete: ${sensorDataChanged ? 'Sensor data sent' : 'No sensor change'}, alerts always sent to masterscreen`
   );
 }
 
 setInterval(checkSensorData, 1000);
 
 wss.on('connection', async (ws, req) => {
+  console.log('🔌 WebSocket connection received');
+
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const token = url.searchParams.get('token');
-    if (!token) return ws.close(1008, 'Token missing');
+    if (!token) {
+      console.warn('🚫 Token missing, closing connection');
+      return ws.close(1008, 'Token missing');
+    }
 
     const user = await verifyToken(token);
     ws.user = user;
 
     console.log(`✅ Authenticated: ${user.username} (ID: ${user.id})`);
 
-    // Send initial sensor data and alerts
     if (lastSensorData) {
       const rows = JSON.parse(lastSensorData);
       const userRows =
