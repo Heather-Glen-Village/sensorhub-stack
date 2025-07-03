@@ -1,82 +1,53 @@
-import { pool } from '../db.js'; // assumes pool is exported from your db module
+import { pool } from '../db.js';
 
-async function alertExists(row) {
-  const result = await pool.query(
-    `SELECT 1 FROM alerts WHERE user_id = $1 AND sensor_type = $2 AND measurement = $3 LIMIT 1`,
-    [row.user_id, row.sensor_type, row.measurement]
-  );
-  return result.rowCount > 0;
-}
+// thresholds with hysteresis to reduce flickering
+const HIGH_THRESHOLD = 70.5;
+const LOW_THRESHOLD = 9.5;
 
 export async function evaluateAlerts(sensorRows) {
-  const alertsToInsert = [];
-  // Optional: const alertsToResolve = [];
-
   for (const row of sensorRows) {
-    //temperature alerts
     if (row.sensor_type === 'temperature') {
       const temp = parseFloat(row.measurement);
 
-      if (temp > 70) {
-        const exists = await pool.query(
-          `SELECT 1 FROM alerts WHERE user_id = $1 AND sensor_type = $2 LIMIT 1`,
+      if (temp > HIGH_THRESHOLD) {
+        await pool.query(
+          `INSERT INTO alerts (user_id, sensor_type, measurement, severity, message, resolved)
+           VALUES ($1, $2, $3, $4, $5, FALSE)
+           ON CONFLICT (user_id, sensor_type)
+           DO UPDATE SET
+             measurement = EXCLUDED.measurement,
+             severity = EXCLUDED.severity,
+             message = EXCLUDED.message,
+             resolved = FALSE`,
+          [row.user_id, row.sensor_type, temp, 'high', '🔥 High temperature detected']
+        );
+      }
+
+      else if (temp < LOW_THRESHOLD) {
+        await pool.query(
+          `INSERT INTO alerts (user_id, sensor_type, measurement, severity, message, resolved)
+           VALUES ($1, $2, $3, $4, $5, FALSE)
+           ON CONFLICT (user_id, sensor_type)
+           DO UPDATE SET
+             measurement = EXCLUDED.measurement,
+             severity = EXCLUDED.severity,
+             message = EXCLUDED.message,
+             resolved = FALSE`,
+          [row.user_id, row.sensor_type, temp, 'low', '❄️ Low temperature detected']
+        );
+      }
+
+      else {
+        // value is within normal range, mark existing alert as resolved if needed
+        await pool.query(
+          `UPDATE alerts
+           SET resolved = TRUE
+           WHERE user_id = $1 AND sensor_type = $2 AND resolved = FALSE`,
           [row.user_id, row.sensor_type]
         );
-
-        if (exists.rowCount == 0) {
-          alertsToInsert.push({
-            user_id: row.user_id,
-            sensor_type: row.sensor_type,
-            measurement: row.measurement,
-            severity: 'high',
-            message: '🔥 High temperature detected'
-          });
-        }
       }
-      else if(temp < 10) {
-        const exists = await pool.query(
-          `SELECT 1 FROM alerts WHERE user_id = $1 AND sensor_type = $2 LIMIT 1`,
-          [row.user_id, row.sensor_type]
-        );
-
-        if (exists.rowCount > 0) {
-          // await pool.query(
-          //   `DELETE FROM alerts WHERE user_id = $1 AND sensor_type = $2`,
-          //   [row.user_id, row.sensor_type]
-          // ); console.log("clearing high temp alert");
-        }
-
-
-        if (exists.rowCount == 0) {
-          alertsToInsert.push({
-            user_id: row.user_id,
-            sensor_type: row.sensor_type,
-            measurement: row.measurement,
-            severity: 'low',
-            message: '❄️ Low temperature detected'
-          });
-        }
-      }
-      else{
-        // await pool.query(
-        //     `DELETE FROM alerts WHERE user_id = $1 AND sensor_type = $2`,
-        //     [row.user_id, row.sensor_type]
-        //   ); console.log("removing alerts");
-      }
-
-      // Optional: track resolved alerts instead of deleting them here
-      // else if (temp > 0) {
-      //   alertsToResolve.push({
-      //     user_id: row.user_id,
-      //     sensor_type: row.sensor_type
-      //   });
-      // }
     }
 
-    // Add more sensor types and alert logic here
+    // Add other sensor types here in the same structure
   }
-
-  return alertsToInsert;
-  // Or return both:
-  // return { alertsToInsert, alertsToResolve };
 }
