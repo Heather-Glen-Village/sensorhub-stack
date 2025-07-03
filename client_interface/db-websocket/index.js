@@ -2,7 +2,7 @@ import { WebSocketServer } from 'ws';
 import { URL } from 'url';
 
 import {evaluateAlerts} from './alerts/evaluate.js';
-import saveAndBroadcastAlerts from './alerts/handler.js';
+import {saveAndBroadcastAlerts} from './alerts/handler.js';
 
 import { verifyToken } from './auth.js';
 import { getLatestSensorData, getLatestAlertData } from './sensor.js';
