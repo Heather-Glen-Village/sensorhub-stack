@@ -133,24 +133,24 @@ export default function SensorDashboard() {
     <>
       <Header />
       <div className="min-h-[50vh] bg-gray-100 p-6">
-        <div className="max-w-xl mx-auto flex flex-col lg:flex-row gap-6">
-          <div className="flex-1">
-            <SensorData
-              readingsByUser={readingsByUser}
-              isMaster={user.username === 'masterscreen'}
-            />
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6">
+          {/* Sensor Data Panel */}
+          <div className="flex-1 min-w-[300px]">
+            <SensorData readingsByUser={readingsByUser} isMaster={user.username === 'masterscreen'} />
           </div>
-          <div className="w-[90vw] shrink-0">
+
+          {/* Alert Panel */}
+          <div className="w-full max-w-[500px] shrink-0">
             <AlertPanel
               alerts={alerts}
               onResolve={(alert) => {
-                console.log('🛠️ Resolving alert:', alert);
-                setAlerts((prev) => prev.filter((a) => a !== alert));
+                setAlerts(prev => prev.filter(a => a !== alert));
               }}
             />
           </div>
         </div>
       </div>
+
       <Footer />
     </>
   );
