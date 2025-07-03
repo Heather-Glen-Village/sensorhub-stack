@@ -4,6 +4,8 @@ const { Pool } = pkg;
 
 dotenv.config();
 
+console.log('DATABASE_URL used:', process.env.DATABASE_URL);
+
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });

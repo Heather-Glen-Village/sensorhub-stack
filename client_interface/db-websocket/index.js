@@ -5,9 +5,6 @@ import { verifyToken } from './auth.js';
 
 import { getLatestSensorData, getLatestAlertData } from './sensor.js';
 
-import { evaluateAlerts } from './alerts/evaluate.js';
-import { saveAndBroadcastAlerts } from './alerts/handler.js';
-
 const wss = new WebSocketServer({ port: 8080 });
 console.log('WebSocket server listening on ws://localhost:8080');
 
