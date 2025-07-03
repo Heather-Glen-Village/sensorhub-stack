@@ -132,7 +132,7 @@ export default function SensorDashboard() {
           <div className="flex-1">
             <SensorData readingsByUser={readingsByUser} isMaster={user.username === 'masterscreen'} />
           </div>
-          <div className="w-[20vw] lg:w-60 shrink-0">
+          <div className="w-[60vw] lg:w-60 shrink-0">
             <AlertPanel alerts={alerts} />
           </div>
         </div>
