@@ -4,7 +4,7 @@ const { Pool } = pkg;
 
 // Now process.env.DATABASE_URL will be defined
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: "postgres://postgres:postgres@localhost:5432/authdb"
 });
 
 
