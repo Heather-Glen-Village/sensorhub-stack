@@ -2,7 +2,6 @@ import { WebSocketServer } from 'ws';
 import { URL } from 'url';
 
 import { verifyToken } from './auth.js';
-
 import { getLatestSensorData, getLatestAlertData } from './sensor.js';
 
 const wss = new WebSocketServer({ port: 8080 });
@@ -21,6 +20,7 @@ async function checkSensorData() {
   }
 
   const alerts = await getLatestAlertData(); // Fetch all alerts (with status)
+  console.log("🔍 getLatestAlertData returned:", alerts);
   latestAlerts = alerts;
 
   const alertMessage = {
@@ -52,6 +52,7 @@ async function checkSensorData() {
     `📤 ${sensorDataChanged ? 'Sensor data' : 'No sensor change'}, alerts sent to masterscreen`
   );
 }
+
 setInterval(checkSensorData, 1000);
 
 wss.on('connection', async (ws, req) => {
@@ -63,7 +64,7 @@ wss.on('connection', async (ws, req) => {
     const user = await verifyToken(token);
     ws.user = user;
 
-    console.log(`Authenticated: ${user.username} (ID: ${user.id})`);
+    console.log(`✅ Authenticated: ${user.username} (ID: ${user.id})`);
 
     // Send initial sensor data and alerts
     if (lastSensorData) {
@@ -80,7 +81,7 @@ wss.on('connection', async (ws, req) => {
       }
     }
   } catch (err) {
-    console.error('Auth error:', err.message);
+    console.error('❌ Auth error:', err.message);
     ws.close(1008, 'Invalid token');
   }
 });
