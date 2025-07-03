@@ -1,5 +1,6 @@
 // components/Alert.tsx
 interface Alert {
+  id: number;
   user_id: number;
   sensor_type: string;
   measurement: string;

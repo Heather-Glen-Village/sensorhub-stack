@@ -1,6 +1,8 @@
 import { WebSocketServer } from 'ws';
 import { URL } from 'url';
 
+import {evaluateAlerts, saveAndBroadcastAlerts} from './alerts.js';
+
 import { verifyToken } from './auth.js';
 import { getLatestSensorData, getLatestAlertData } from './sensor.js';
 
@@ -10,60 +12,58 @@ console.log('📡 WebSocket server listening on ws://localhost:8080');
 let lastSensorData = null;
 let latestAlerts = [];
 
+let alerts = [];
+
 async function checkSensorData() {
-  console.log('🔁 Running checkSensorData');
+  console.log('🔁 Checking sensor data...');
 
-  const rows = await getLatestSensorData();
-  console.log('📦 Latest sensor rows:', rows);
+  const sensorRows = await getLatestSensorData();
+  const alertsToInsert = await evaluateAlerts(sensorRows);
+  await saveAndBroadcastAlerts(alertsToInsert, wss);
 
-  const rawJson = JSON.stringify(rows);
-  const sensorDataChanged = rawJson !== lastSensorData;
+  console.log('📈 Sensor data:', sensorRows);
+  console.log('📋 New alerts:', alertsToInsert);
 
+  const sensorJson = JSON.stringify(sensorRows);
+  const sensorDataChanged = sensorJson !== lastSensorData;
   if (sensorDataChanged) {
     console.log('✅ Sensor data changed');
-    lastSensorData = rawJson;
+    lastSensorData = sensorJson;
   } else {
-    console.log('➖ Sensor data unchanged');
+    console.log('➖ No change in sensor data');
   }
 
-  const alerts = await getLatestAlertData();
-  console.log("📢 getLatestAlertData returned:", alerts);
-
-  latestAlerts = alerts;
-
-  const alertMessage = {
-    type: 'alert',
-    data: alerts,
-  };
+  // Refresh latest unresolved + unacknowledged alerts
+  latestAlerts = await getLatestAlertData();
+  const alertPayload = { type: 'alert', data: latestAlerts };
 
   wss.clients.forEach((client) => {
     if (client.readyState !== 1 || !client.user) {
-      console.log('⚠️ Skipping inactive or unauthenticated client');
+      console.log('⚠️ Skipping inactive/unauthenticated client');
       return;
     }
 
     const isMaster = client.user.username === 'masterscreen';
-    console.log(`📨 Preparing data for ${client.user.username}`);
-
-    const userRows = isMaster
-      ? rows
-      : rows.filter((r) => r.user_id === client.user.id);
+    const userSensorRows = isMaster
+      ? sensorRows
+      : sensorRows.filter((r) => r.user_id === client.user.id);
 
     if (sensorDataChanged) {
       console.log(`📤 Sending sensor data to ${client.user.username}`);
-      client.send(JSON.stringify({ type: 'sensor', data: userRows }));
+      client.send(JSON.stringify({ type: 'sensor', data: userSensorRows }));
     }
 
     if (isMaster) {
       console.log(`🚨 Sending alert data to ${client.user.username}`);
-      client.send(JSON.stringify(alertMessage));
+      client.send(JSON.stringify(alertPayload));
     }
   });
 
   console.log(
-    `🟢 Broadcast complete: ${sensorDataChanged ? 'Sensor data sent' : 'No sensor change'}, alerts always sent to masterscreen`
+    `🟢 Broadcast complete: ${sensorDataChanged ? 'Sensor data sent' : 'No change'}, alerts sent to masterscreen`
   );
 }
+
 
 setInterval(checkSensorData, 1000);
 

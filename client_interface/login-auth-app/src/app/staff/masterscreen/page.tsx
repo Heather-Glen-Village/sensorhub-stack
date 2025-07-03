@@ -24,6 +24,7 @@ interface SensorReading {
 }
 
 interface Alert {
+  id: number;
   user_id: number;
   sensor_type: string;
   measurement: string;
@@ -84,6 +85,8 @@ export default function SensorDashboard() {
         console.log('🔍 Parsed message type:', type);
         console.log('📦 Parsed data:', data);
 
+        //so much redundancy here, but can be helpful i guess...
+
         if (type === 'sensor') {
           const filteredRows = user.username === 'masterscreen'
             ? data
@@ -102,13 +105,15 @@ export default function SensorDashboard() {
         }
 
         if (type === 'alert') {
-          const filteredAlerts = user.username === 'masterscreen'
-            ? data
-            : data.filter((a: Alert) => a.user_id === user.id);
-
-          console.log('🚨 Filtered alerts:', filteredAlerts);
-          setAlerts(filteredAlerts);
+          if (user.username === 'masterscreen') {
+            console.log('🚨 Masterscreen alerts:', data);
+            setAlerts(data);
+          } else {
+            console.log('🔕 Non-master user – ignoring alert data');
+            setAlerts([]); // Optional: clear existing alerts
+          }
         }
+
       } catch (err) {
         console.error('❗ Error parsing WebSocket message:', err);
       }
@@ -143,9 +148,26 @@ export default function SensorDashboard() {
           <div className="w-full max-w-[500px] shrink-0">
             <AlertPanel
               alerts={alerts}
-              onResolve={(alert) => {
-                setAlerts(prev => prev.filter(a => a !== alert));
+                onResolve={async (alert) => {
+                try {
+                  const res = await fetch(`http://<YOUR_API_HOST>/api/resolve-alert`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ alertId: alert.id }),
+                  });
+
+                  if (!res.ok) throw new Error(`Failed to resolve alert: ${res.status}`);
+
+                  const result = await res.json();
+                  console.log('✅ Alert resolved:', result);
+                  // Optional: refresh alert list after server confirms resolution
+                } catch (err) {
+                  console.error('❌ Error resolving alert:', err);
+                }
               }}
+
             />
           </div>
         </div>
