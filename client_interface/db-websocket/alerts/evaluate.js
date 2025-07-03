@@ -40,10 +40,10 @@ export async function evaluateAlerts(sensorRows) {
         );
 
         if (exists.rowCount > 0) {
-          await pool.query(
-            `DELETE FROM alerts WHERE user_id = $1 AND sensor_type = $2`,
-            [row.user_id, row.sensor_type]
-          ); console.log("clearing high temp alert");
+          // await pool.query(
+          //   `DELETE FROM alerts WHERE user_id = $1 AND sensor_type = $2`,
+          //   [row.user_id, row.sensor_type]
+          // ); console.log("clearing high temp alert");
         }
 
 
@@ -58,10 +58,10 @@ export async function evaluateAlerts(sensorRows) {
         }
       }
       else{
-        await pool.query(
-            `DELETE FROM alerts WHERE user_id = $1 AND sensor_type = $2`,
-            [row.user_id, row.sensor_type]
-          ); console.log("removing alerts");
+        // await pool.query(
+        //     `DELETE FROM alerts WHERE user_id = $1 AND sensor_type = $2`,
+        //     [row.user_id, row.sensor_type]
+        //   ); console.log("removing alerts");
       }
 
       // Optional: track resolved alerts instead of deleting them here
