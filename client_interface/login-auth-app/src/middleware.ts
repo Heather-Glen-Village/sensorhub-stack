@@ -11,6 +11,7 @@ const STAFF_ALLOWED_USER = 'masterscreen';
 export async function middleware(req: NextRequest) {
   const token = req.cookies.get('token')?.value;
   const { pathname } = req.nextUrl;
+  return NextResponse.next();
 
   // Allow public routes through
   if (PUBLIC_ROUTES.includes(pathname)) {

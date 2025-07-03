@@ -23,6 +23,7 @@ interface Alert {
   measurement: string;
   severity: string;
   message: string;
+  helpText: string;
 }
 
 export default function SensorDashboard() {
@@ -31,36 +32,7 @@ export default function SensorDashboard() {
   const [loading, setLoading] = useState(true);
   const [readingsByUser, setReadingsByUser] = useState<Record<number, Record<string, string>>>({});
   // const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [alerts, setAlerts] = useState<Alert[]>([
-  {
-    user_id: 1,
-    sensor_type: 'temperature',
-    measurement: '75.2',
-    severity: 'high',
-    message: '🔥 High temperature detected',
-  },
-  {
-    user_id: 2,
-    sensor_type: 'humidity',
-    measurement: '19%',
-    severity: 'low',
-    message: '💧 Low humidity detected',
-  },
-  {
-    user_id: 3,
-    sensor_type: 'motion',
-    measurement: 'yes',
-    severity: 'medium',
-    message: '🚨 Unexpected motion detected',
-  },
-  {
-    user_id: 1,
-    sensor_type: 'light',
-    measurement: '900lx',
-    severity: 'low',
-    message: '💡 High light intensity',
-  },
-]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
 
 
 
@@ -86,20 +58,18 @@ export default function SensorDashboard() {
   }, []);
 
   useEffect(() => {
-    if (!user || !token) return;
+  if (!user || !token) return;
 
-    const socket = new WebSocket(`ws://localhost:8080?token=${token}`);
+  const socket = new WebSocket(`ws://localhost:8080?token=${token}`);
 
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
+  socket.onmessage = (event) => {
+    try {
+      const { type, data } = JSON.parse(event.data);
 
-        const rows: SensorReading[] = data.sensorRows ?? data;
-        const alertRows: Alert[] = Array.isArray(data.alerts) ? data.alerts : alerts;
-
+      if (type === 'sensor') {
         const filteredRows = user.username === 'masterscreen'
-          ? rows
-          : rows.filter(r => r.user_id === user.id);
+          ? data
+          : data.filter((r: SensorReading) => r.user_id === user.id);
 
         const grouped: Record<number, Record<string, string>> = {};
         for (const r of filteredRows) {
@@ -107,22 +77,25 @@ export default function SensorDashboard() {
           grouped[r.user_id][r.sensor_type] = r.measurement;
         }
         setReadingsByUser(grouped);
-
-        const filteredAlerts = user.username === 'masterscreen'
-          ? alertRows
-          : alertRows.filter(a => a.user_id === user.id);
-        setAlerts(filteredAlerts);
-
-      } catch (err) {
-        console.error('Error parsing WebSocket data:', err);
       }
-    };
 
-    return () => socket.close();
-  }, [user, token]);
+      if (type === 'alert') {
+        const filteredAlerts = user.username === 'masterscreen'
+          ? data
+          : data.filter((a: Alert) => a.user_id === user.id);
+        setAlerts(filteredAlerts);
+      }
 
-  if (loading) return <div>Loading...</div>;
-  if (!user) return <div>You are not authorized. Please log in.</div>;
+    } catch (err) {
+      console.error('Error parsing WebSocket message:', err);
+    }
+  };
+
+  return () => socket.close();
+}, [user, token]);
+
+  // if (loading) return <div>Loading...</div>;
+  // if (!user) return <div>You are not authorized. Please log in.</div>;
 
   return (
     <>
@@ -130,10 +103,15 @@ export default function SensorDashboard() {
       <div className="min-h-[50vh] bg-gray-100 p-6">
         <div className="max-w-xl mx-auto flex flex-col lg:flex-row gap-6">
           <div className="flex-1">
-            <SensorData readingsByUser={readingsByUser} isMaster={user.username === 'masterscreen'} />
+            {/* <SensorData readingsByUser={readingsByUser} isMaster={user.username === 'masterscreen'} /> */}
           </div>
-          <div className="w-[60vw] lg:w-60 shrink-0">
-            <AlertPanel alerts={alerts} />
+          <div className="w-[90vw]shrink-0">
+             <AlertPanel
+              alerts={alerts}
+             onResolve={(alert) => {
+                setAlerts(prev => prev.filter(a => a !== alert));
+              }}
+            />
           </div>
         </div>
       </div>
