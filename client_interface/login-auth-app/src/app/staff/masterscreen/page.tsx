@@ -128,7 +128,7 @@ export default function SensorDashboard() {
     <>
       <Header />
       <div className="min-h-[50vh] bg-gray-100 p-6">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6">
+        <div className="max-w-xl mx-auto flex flex-col lg:flex-row gap-6">
           <div className="flex-1">
             <SensorData readingsByUser={readingsByUser} isMaster={user.username === 'masterscreen'} />
           </div>
