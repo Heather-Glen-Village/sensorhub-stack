@@ -1,5 +1,6 @@
 -- Drop tables if they already exist
 DROP TABLE IF EXISTS sensordata;
+DROP TABLE IF EXISTS alerts;
 DROP TABLE IF EXISTS users;
 
 -- Create users table
@@ -47,15 +48,15 @@ INSERT INTO sensordata (user_id, sensor_type, measurement, created_at) VALUES
   (4, 'co2', '415ppm', '2025-05-31 02:25:03.275663'),
   (4, 'motion', 'Motion detected', '2025-05-31 02:25:03.275663');
 
-
+-- Create alerts table
 CREATE TABLE alerts (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id),
-  sensor_type TEXT,
-  measurement TEXT,
+  sensor_type TEXT NOT NULL,
+  measurement TEXT NOT NULL,
   severity TEXT, -- e.g., 'low', 'medium', 'high'
-  message TEXT,
-  triggered_at TIMESTAMP DEFAULT NOW(),
+  message TEXT NOT NULL,
+  triggered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   acknowledged BOOLEAN DEFAULT FALSE,
   resolved BOOLEAN DEFAULT FALSE
 );

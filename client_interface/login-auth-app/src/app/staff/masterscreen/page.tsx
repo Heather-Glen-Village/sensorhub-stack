@@ -5,6 +5,12 @@ import Footer from '@/components/Footer';
 import SensorData from './sensordata';
 import AlertPanel from './alert';
 
+declare global {
+  interface Window {
+    websocket?: WebSocket;
+  }
+}
+
 interface User {
   id: number;
   username: string;
@@ -18,11 +24,13 @@ interface SensorReading {
 }
 
 interface Alert {
+  id: number;
   user_id: number;
   sensor_type: string;
   measurement: string;
   severity: string;
   message: string;
+  helpText: string;
 }
 
 export default function SensorDashboard() {
@@ -30,40 +38,7 @@ export default function SensorDashboard() {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [readingsByUser, setReadingsByUser] = useState<Record<number, Record<string, string>>>({});
-  // const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [alerts, setAlerts] = useState<Alert[]>([
-  {
-    user_id: 1,
-    sensor_type: 'temperature',
-    measurement: '75.2',
-    severity: 'high',
-    message: '🔥 High temperature detected',
-  },
-  {
-    user_id: 2,
-    sensor_type: 'humidity',
-    measurement: '19%',
-    severity: 'low',
-    message: '💧 Low humidity detected',
-  },
-  {
-    user_id: 3,
-    sensor_type: 'motion',
-    measurement: 'yes',
-    severity: 'medium',
-    message: '🚨 Unexpected motion detected',
-  },
-  {
-    user_id: 1,
-    sensor_type: 'light',
-    measurement: '900lx',
-    severity: 'low',
-    message: '💡 High light intensity',
-  },
-]);
-
-
-
+  const [alerts, setAlerts] = useState<Alert[]>([]);
 
   useEffect(() => {
     async function fetchUser() {
@@ -71,10 +46,12 @@ export default function SensorDashboard() {
         const res = await fetch('/api/me');
         if (!res.ok) throw new Error('Unauthorized');
         const data = await res.json();
+        console.log('👤 User fetched:', data.user);
+        console.log('🔐 Token fetched:', data.token);
         setUser(data.user);
         setToken(data.token);
       } catch (err) {
-        console.error('Failed to load user:', err);
+        console.error('❌ Failed to load user:', err);
         setUser(null);
         setToken(null);
       } finally {
@@ -86,57 +63,117 @@ export default function SensorDashboard() {
   }, []);
 
   useEffect(() => {
-    if (!user || !token) return;
+    if (!user || !token) {
+      console.warn('⚠️ Skipping WebSocket setup (missing user or token)', { user, token });
+      return;
+    }
 
-    const socket = new WebSocket(`ws://localhost:8080?token=${token}`);
+    const socketUrl = `ws://localhost:8080?token=${token}`;
+    console.log('🌐 Connecting WebSocket to:', socketUrl);
 
+    const socket = new WebSocket(socketUrl);
+    window.websocket = socket;
+
+    socket.onopen = () => console.log('🟢 WebSocket connected');
+    socket.onerror = (e) => console.error('❌ WebSocket error:', e);
+    socket.onclose = (e) => console.log('🔌 WebSocket closed:', e);
+    
     socket.onmessage = (event) => {
+      console.log('📩 WebSocket received:', event.data);
       try {
-        const data = JSON.parse(event.data);
+        const { type, data } = JSON.parse(event.data);
+        console.log('🔍 Parsed message type:', type);
+        console.log('📦 Parsed data:', data);
 
-        const rows: SensorReading[] = data.sensorRows ?? data;
-        const alertRows: Alert[] = Array.isArray(data.alerts) ? data.alerts : alerts;
+        //so much redundancy here, but can be helpful i guess...
 
-        const filteredRows = user.username === 'masterscreen'
-          ? rows
-          : rows.filter(r => r.user_id === user.id);
+        if (type === 'sensor') {
+          const filteredRows = user.username === 'masterscreen'
+            ? data
+            : data.filter((r: SensorReading) => r.user_id === user.id);
 
-        const grouped: Record<number, Record<string, string>> = {};
-        for (const r of filteredRows) {
-          if (!grouped[r.user_id]) grouped[r.user_id] = {};
-          grouped[r.user_id][r.sensor_type] = r.measurement;
+          console.log('📊 Filtered sensor rows:', filteredRows);
+
+          const grouped: Record<number, Record<string, string>> = {};
+          for (const r of filteredRows) {
+            if (!grouped[r.user_id]) grouped[r.user_id] = {};
+            grouped[r.user_id][r.sensor_type] = r.measurement;
+          }
+
+          console.log('📈 Grouped readings by user:', grouped);
+          setReadingsByUser(grouped);
         }
-        setReadingsByUser(grouped);
 
-        const filteredAlerts = user.username === 'masterscreen'
-          ? alertRows
-          : alertRows.filter(a => a.user_id === user.id);
-        setAlerts(filteredAlerts);
+        if (type === 'alert') {
+          if (user.username === 'masterscreen') {
+            console.log('🚨 Masterscreen alerts:', data);
+            setAlerts(data);
+          } else {
+            console.log('🔕 Non-master user – ignoring alert data');
+            setAlerts([]); // Optional: clear existing alerts
+          }
+        }
 
       } catch (err) {
-        console.error('Error parsing WebSocket data:', err);
+        console.error('❗ Error parsing WebSocket message:', err);
       }
     };
 
-    return () => socket.close();
+    return () => {
+      console.log('🧹 Cleaning up WebSocket connection');
+      socket.close();
+    };
   }, [user, token]);
 
-  if (loading) return <div>Loading...</div>;
-  if (!user) return <div>You are not authorized. Please log in.</div>;
+  if (loading) {
+    console.log('⏳ Loading user...');
+    return <div>Loading...</div>;
+  }
+  if (!user) {
+    console.log('⛔ User not authenticated');
+    return <div>You are not authorized. Please log in.</div>;
+  }
 
   return (
     <>
       <Header />
       <div className="min-h-[50vh] bg-gray-100 p-6">
-        <div className="max-w-xl mx-auto flex flex-col lg:flex-row gap-6">
-          <div className="flex-1">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6">
+          {/* Sensor Data Panel */}
+          <div className="flex-1 min-w-[300px]">
             <SensorData readingsByUser={readingsByUser} isMaster={user.username === 'masterscreen'} />
           </div>
-          <div className="w-[60vw] lg:w-60 shrink-0">
-            <AlertPanel alerts={alerts} />
+
+          {/* Alert Panel */}
+          <div className="w-full max-w-[500px] shrink-0">
+            <AlertPanel
+              alerts={alerts}
+                onResolve={async (alert) => {
+                try {
+                  const res = await fetch(`http://<YOUR_API_HOST>/api/resolve-alert`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ alertId: alert.id }),
+                  });
+
+                  if (!res.ok) throw new Error(`Failed to resolve alert: ${res.status}`);
+
+                  const result = await res.json();
+                  console.log('✅ Alert resolved:', result);
+                  // Optional: refresh alert list after server confirms resolution
+                } catch (err) {
+                  console.error('❌ Error resolving alert:', err);
+                }
+              }}
+
+            />
           </div>
         </div>
       </div>
+
+
       <Footer />
     </>
   );

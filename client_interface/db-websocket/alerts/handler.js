@@ -28,13 +28,13 @@ export async function saveAndBroadcastAlerts(alerts, wss) {
     `SELECT * FROM alerts WHERE resolved = FALSE AND acknowledged = FALSE`
   );
 
-  wss.clients.forEach(client => {
-    if (client.readyState === client.OPEN && client.user) {
-      const relevantAlerts = client.user.username === 'masterscreen'
-        ? activeAlerts
-        : activeAlerts.filter(a => a.user_id === client.user.id);
+  // wss.clients.forEach(client => {
+  //   if (client.readyState === client.OPEN && client.user) {
+  //     const relevantAlerts = client.user.username === 'masterscreen'
+  //       ? activeAlerts
+  //       : activeAlerts.filter(a => a.user_id === client.user.id);
 
-      client.send(JSON.stringify({ type: 'alerts', data: relevantAlerts }));
-    }
-  });
+  //     client.send(JSON.stringify({ type: 'alerts', data: relevantAlerts }));
+  //   }
+  // });
 }
