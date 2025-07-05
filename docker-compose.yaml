@@ -118,6 +118,7 @@ services:
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres-db:5432/authdb
       TIMESTAMP_DB_URL: postgres://postgres:postgres@postgres-timestamps:5432/timestampsdb
+      JWT_SECRET: super_secure_key
     depends_on:
       postgres-db:
         condition: service_healthy

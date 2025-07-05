@@ -53,3 +53,5 @@ export async function evaluateAlerts(sensorRows) {
 
   return []; // Return an empty array since we're handling DB updates directly
 }
+
+

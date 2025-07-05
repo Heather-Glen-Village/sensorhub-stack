@@ -5,3 +5,8 @@ nextjs/db-websocket
 nextjs/login-auth-app
 
 Both folders share the jwt private key in their .env files are are required for the full functionality.
+
+When moving files from local to developmenet or vise versa permission of the folders and uid of the postgres
+instances are VERY important.
+
+use id postgres to get the UID of the postgres instance and configure using chown.

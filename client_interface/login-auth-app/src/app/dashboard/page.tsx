@@ -23,14 +23,15 @@ export default function SensorDashboard() {
 
   const userRef = useRef<User | null>(null);
 
+  // fetch current user & token
   useEffect(() => {
     async function fetchUser() {
       try {
         const res = await fetch('/api/me');
         if (!res.ok) throw new Error('Unauthorized');
-        const data = await res.json();
-        setUser(data.user);
-        setToken(data.token);
+        const { user, token } = await res.json();
+        setUser(user);
+        setToken(token);
       } catch (err) {
         console.error('Failed to load user:', err);
         setUser(null);
@@ -39,70 +40,102 @@ export default function SensorDashboard() {
         setLoading(false);
       }
     }
-
     fetchUser();
   }, []);
 
-  // keep userRef in sync
+  // keep ref in sync
   useEffect(() => {
     userRef.current = user;
   }, [user]);
 
+  // websocket subscription
   useEffect(() => {
-    if (!user || !token) return;
+    if (!token || !user) return;
 
     const socket = new WebSocket(`ws://localhost:8080?token=${token}`);
-    console.log('Connecting to WebSocket with token:', token);
+    console.log('⏳ Connecting to WebSocket with token:', token);
 
     socket.onmessage = (event) => {
       try {
-        const user = userRef.current;
-        if (!user) return;
+        console.log('🔔 Raw WS message:', event.data);
+        const parsed = JSON.parse(event.data);
 
-        const rows: SensorReading[] = JSON.parse(event.data);
-        const userReadings = rows.filter(r => r.user_id === user.id);
+        // normalize to SensorReading[]
+        let rows: SensorReading[] = [];
+        if (Array.isArray(parsed)) {
+          rows = parsed;
+        } else if (parsed.data && Array.isArray(parsed.data)) {
+          rows = parsed.data;
+        } else if (parsed.rows && Array.isArray(parsed.rows)) {
+          rows = parsed.rows;
+        } else {
+          console.warn('WS payload not an array, data, or rows:', parsed);
+          return;
+        }
+
+        const currentUser = userRef.current;
+        if (!currentUser) {
+          console.warn('No currentUser in ref');
+          return;
+        }
+
+        // now safe to filter
+        const userReadings = rows.filter(r => r.user_id === currentUser.id);
 
         const grouped: Record<string, string> = {};
         for (const r of userReadings) {
           grouped[r.sensor_type] = r.measurement;
         }
-
         setReadings(grouped);
       } catch (err) {
-        console.error('Error parsing WebSocket data:', err);
+        console.error('❌ Error handling WS data:', err);
       }
     };
 
-    return () => socket.close();
-  }, [token]); // ✅ depends only on token, user handled via ref
+    socket.onerror = (err) => {
+      console.error('WebSocket error:', err);
+    };
+
+    return () => {
+      socket.close();
+      console.log('🔒 WebSocket closed');
+    };
+  }, [token, user]);
 
   if (loading) return <div>Loading...</div>;
-  if (!user) return <div>You are not authorized. Please log in.</div>;
+  if (!user)  return <div>You are not authorized. Please log in.</div>;
 
   return (
     <>
-    <Header></Header>
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-xl mx-auto">
-        <h1 className="text-2xl font-bold mb-4">Welcome, {user.username}!</h1>
+      <Header />
+      <div className="min-h-screen bg-gray-100 p-6">
+        <div className="max-w-xl mx-auto">
+          <h1 className="text-2xl font-bold mb-4">
+            Welcome, {user.username}!
+          </h1>
 
-        {Object.keys(readings).length > 0 ? (
-          <div className="bg-white shadow rounded-lg p-4 border border-gray-200">
-            <h2 className="text-xl font-semibold text-blue-700 mb-2">Your Sensor Data</h2>
-            <ul className="space-y-1 text-gray-800">
-              {Object.entries(readings).map(([type, value]) => (
-                <li key={type}>
-                  <strong>{type.charAt(0).toUpperCase() + type.slice(1)}:</strong> {value}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : (
-          <p>No sensor data found for your account.</p>
-        )}
+          {Object.keys(readings).length > 0 ? (
+            <div className="bg-white shadow rounded-lg p-4 border border-gray-200">
+              <h2 className="text-xl font-semibold text-blue-700 mb-2">
+                Your Sensor Data
+              </h2>
+              <ul className="space-y-1 text-gray-800">
+                {Object.entries(readings).map(([type, value]) => (
+                  <li key={type}>
+                    <strong>
+                      {type.charAt(0).toUpperCase() + type.slice(1)}:
+                    </strong>{' '}
+                    {value}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p>No sensor data found for your account.</p>
+          )}
+        </div>
       </div>
-    </div>
-    <Footer></Footer>
+      <Footer />
     </>
   );
 }

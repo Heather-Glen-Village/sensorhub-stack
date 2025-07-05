@@ -20,7 +20,7 @@ async function checkSensorData() {
 
   const sensorRows = await getLatestSensorData();
   const alertsToInsert = await evaluateAlerts(sensorRows);
-  await saveAndBroadcastAlerts(alertsToInsert, wss);
+  // await saveAndBroadcastAlerts(alertsToInsert, wss);
 
   console.log('📈 Sensor data:', sensorRows);
   console.log('📋 New alerts:', alertsToInsert);

@@ -13,7 +13,7 @@ const getRandomValue = (min, max, suffix = '') =>
 
 async function updateSensorData(userId) {
   const readings = [
-    { sensor_type: 'temperature', measurement: getRandomValue(70, 80) },
+    { sensor_type: 'temperature', measurement: getRandomValue(20, 55) },
     { sensor_type: 'humidity', measurement: getRandomValue(40, 60, '%') },
     { sensor_type: 'motion', measurement: Math.random() > 0.5 ? 'yes' : 'no' },
     { sensor_type: 'light', measurement: getRandomValue(100, 300, 'lx') }
