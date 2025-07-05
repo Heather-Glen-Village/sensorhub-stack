@@ -11,6 +11,6 @@ jobs:
     steps:
       - name: Send webhook to deploy server
         run: |
-          curl -X POST https://cca7-206-210-109-100.ngrok-free.app/webhook \
+          curl -X POST https://4778-206-210-109-100.ngrok-free.app/webhook \
             -H 'Content-Type: application/json' \
             -d '{"secret": "supersecret"}'
