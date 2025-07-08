@@ -33,6 +33,9 @@ interface Alert {
   helpText: string;
 }
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_NEXT_BACK_IP;
+const WEBSOCKET_URL = process.env.NEXT_PUBLIC_WEBSOCKET_IP;
+
 export default function SensorDashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -46,8 +49,6 @@ export default function SensorDashboard() {
         const res = await fetch('/api/me');
         if (!res.ok) throw new Error('Unauthorized');
         const data = await res.json();
-        console.log('👤 User fetched:', data.user);
-        console.log('🔐 Token fetched:', data.token);
         setUser(data.user);
         setToken(data.token);
       } catch (err) {
@@ -63,14 +64,9 @@ export default function SensorDashboard() {
   }, []);
 
   useEffect(() => {
-    if (!user || !token) {
-      console.warn('⚠️ Skipping WebSocket setup (missing user or token)', { user, token });
-      return;
-    }
+    if (!user || !token || !WEBSOCKET_URL) return;
 
-    const socketUrl = `ws://localhost:8080?token=${token}`;
-    console.log('🌐 Connecting WebSocket to:', socketUrl);
-
+    const socketUrl = `${WEBSOCKET_URL}?token=${token}`;
     const socket = new WebSocket(socketUrl);
     window.websocket = socket;
 
@@ -79,12 +75,8 @@ export default function SensorDashboard() {
     socket.onclose = (e) => console.log('🔌 WebSocket closed:', e);
 
     socket.onmessage = (event) => {
-      console.log('📩 WebSocket received:', event.data);
       try {
         const { type, data } = JSON.parse(event.data);
-        console.log('🔍 Parsed message type:', type);
-        console.log('📦 Parsed data:', data);
-
         if (type === 'sensor') {
           const filteredRows = user.username === 'masterscreen'
             ? data
@@ -100,22 +92,48 @@ export default function SensorDashboard() {
         }
 
         if (type === 'alert') {
-          if (user.username === 'masterscreen') {
-            setAlerts(data);
-          } else {
-            setAlerts([]);
-          }
+          setAlerts(user.username === 'masterscreen' ? data : []);
         }
-
       } catch (err) {
         console.error('❗ Error parsing WebSocket message:', err);
       }
     };
 
-    return () => {
-      socket.close();
-    };
+    return () => socket.close();
   }, [user, token]);
+
+  const handleResolveAlert = async (alert: Alert) => {
+    if (!token || !BACKEND_URL) {
+      console.warn('⚠️ Missing token or BACKEND_URL');
+      return;
+    }
+
+    try {
+      console.log('🧪 Resolving alert with token:', token);
+      const res = await fetch(`${BACKEND_URL}/api/alert/resolve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          user_id: alert.user_id,
+          sensor_type: alert.sensor_type,
+          measurement: alert.measurement,
+        }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.error || 'Unknown error');
+      }
+
+      console.log('✅ Alert resolved:', result);
+      setAlerts(prev => prev.filter(a => a.id !== alert.id));
+    } catch (err) {
+      console.error('❌ Error resolving alert:', err);
+    }
+  };
 
   if (loading) return <div>Loading...</div>;
   if (!user) return <div>You are not authorized. Please log in.</div>;
@@ -126,39 +144,16 @@ export default function SensorDashboard() {
       <div className="min-h-[50vh] bg-gray-100 p-6">
         <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6">
           <div className="flex-1 min-w-[300px]">
-            <SensorData readingsByUser={readingsByUser} isMaster={user.username === 'masterscreen'} />
+            <SensorData
+              readingsByUser={readingsByUser}
+              isMaster={user.username === 'masterscreen'}
+            />
           </div>
           <div className="w-full max-w-[500px] shrink-0">
             <AlertPanel
               alerts={alerts}
-              onResolve={async (alert) => {
-                try {
-                  const res = await fetch(`http://localhost:3000/api/alert/resolve`, {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${token}`, // ✅ Include token here
-                    },
-                    body: JSON.stringify({
-                      user_id: alert.user_id,
-                      sensor_type: alert.sensor_type,
-                      measurement: alert.measurement,
-                    }),
-                  });
-
-                  if (!res.ok) throw new Error(`Failed to resolve alert: ${res.status}`);
-
-                  const result = await res.json();
-                  console.log('✅ Alert resolved:', result);
-
-                  // Optionally remove resolved alert from local state
-                  setAlerts(prev => prev.filter(a => a.id !== alert.id));
-                } catch (err) {
-                  console.error('❌ Error resolving alert:', err);
-                }
-              }}
+              onResolve={handleResolveAlert}
             />
-
           </div>
         </div>
       </div>
