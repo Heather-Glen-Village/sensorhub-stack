@@ -15,7 +15,7 @@ export default function ControlPage() {
       });
       const data = await res.json();
 
-      if (res.ok && data?.nanoResponse?.includes('200')) {
+      if (res.ok && data?.nanoResponse?.toUpperCase().includes('ON')) {
         setStatus('success');
         setMessage(data.nanoResponse);
       } else {
@@ -36,13 +36,13 @@ export default function ControlPage() {
 
       <div className="flex gap-4">
         <button
-          onClick={() => sendCommand('heat/on')}
+          onClick={() => sendCommand('HEAT_ON=1')}
           className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600"
         >
           Turn Heat On
         </button>
         <button
-          onClick={() => sendCommand('heat/off')}
+          onClick={() => sendCommand('HEAT_ON=0')}
           className="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600"
         >
           Turn Heat Off
