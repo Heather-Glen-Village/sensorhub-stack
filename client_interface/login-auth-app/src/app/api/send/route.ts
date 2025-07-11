@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
   try {
     console.log(`➡️ [API] Forwarding to Nano: http://192.168.3.123/${command}`);
-    const nanoRes = await fetch(`http://192.168.3.123/${command}`);
+    const nanoRes = await fetch(`http://192.168.3.123/?${command}`);
     const text = await nanoRes.text();
     console.log('✅ [API] Response from Nano:', text);
 
