@@ -9,12 +9,12 @@ services:
     environment:
       - DATABASE_URL=postgres://postgres:postgres@postgres-db:5432/authdb
       - JWT_SECRET=super_secure_key
-      # - NEXT_PUBLIC_FRONTEND_IP=http://192.168.1.225:3000
-      # - NEXT_PUBLIC_NEXT_BACK_IP=http://192.168.1.225:3000
-      # - NEXT_PUBLIC_WEBSOCKET_IP=ws://192.168.1.225:8080
-      - NEXT_PUBLIC_FRONTEND_IP=http://192.168.3.125:3000
-      - NEXT_PUBLIC_NEXT_BACK_IP=http://192.168.3.125:3000
-      - NEXT_PUBLIC_WEBSOCKET_IP=ws://192.168.3.125:8080
+      - NEXT_PUBLIC_FRONTEND_IP=http://192.168.1.225:3000
+      - NEXT_PUBLIC_NEXT_BACK_IP=http://192.168.1.225:3000
+      - NEXT_PUBLIC_WEBSOCKET_IP=ws://192.168.1.225:8080
+      # - NEXT_PUBLIC_FRONTEND_IP=http://192.168.3.125:3000
+      # - NEXT_PUBLIC_NEXT_BACK_IP=http://192.168.3.125:3000
+      # - NEXT_PUBLIC_WEBSOCKET_IP=ws://192.168.3.125:8080
     working_dir: /app
     command: npm run dev
     networks:

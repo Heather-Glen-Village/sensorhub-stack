@@ -90,7 +90,10 @@ aedes.on('publish', async (packet, clientInfo) => {
 
       // Insert into authdb (basic storage)
       await authDb.query(
-        'INSERT INTO sensordata (user_id, sensor_type, measurement) VALUES ($1, $2, $3)',
+        `INSERT INTO sensordata (user_id, sensor_type, measurement)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (user_id, sensor_type)
+        DO UPDATE SET measurement = EXCLUDED.measurement`,
         [user_id, sensorType, measurement]
       );
 
