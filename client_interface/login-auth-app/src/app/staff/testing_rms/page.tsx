@@ -37,7 +37,7 @@ export default function ControlPage() {
       <div className="flex gap-4">
         <button
           onClick={() => sendCommand('HEAT_ON=1')}
-          className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600"
+          className="bg-red-500 text-white px-6 py-2 rounded hover:bg-blue-600"
         >
           Turn Heat On
         </button>
@@ -46,6 +46,20 @@ export default function ControlPage() {
           className="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600"
         >
           Turn Heat Off
+        </button>
+      </div>
+      <div className="flex gap-4">
+        <button
+          onClick={() => sendCommand('COOL_ON=1')}
+          className="bg-blue-400 text-white px-6 py-2 rounded hover:bg-blue-600"
+        >
+          Turn Cool On
+        </button>
+        <button
+          onClick={() => sendCommand('COOL_ON=0')}
+          className="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600"
+        >
+          Turn Cool Off
         </button>
       </div>
 
